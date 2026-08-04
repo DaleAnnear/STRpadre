@@ -1,0 +1,15 @@
+schema_version: "1.0"
+minimum_caller_support: 2
+absolute_allele_length_tolerance_bp: 5
+relative_allele_length_tolerance: 0.05
+copy_number_tolerance: 1.0
+coordinate_tolerance_bp: 0
+motif_equivalence: rotations_and_reverse_complements
+missing_data_policy: retain_statuses
+haploid_diploid_policy: require_same_ploidy
+filtered_calls_may_contribute: false
+tie_breaking: caller_name_then_input_path
+minimum_read_support: 0
+consensus_statistic: median
+sequence_consensus: disabled
+allow_partial_results: false

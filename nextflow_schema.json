@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "STRpadre global Nextflow parameters",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["samplesheet", "reference", "reference_fai", "locus_manifest", "callers", "outdir"],
+  "properties": {
+    "samplesheet": {"type": "string", "minLength": 1},
+    "reference": {"type": "string", "minLength": 1},
+    "reference_fai": {"type": "string", "minLength": 1},
+    "reference_dict": {"type": ["string", "null"]},
+    "locus_manifest": {"type": "string", "minLength": 1},
+    "callers": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["trgt", "longtr", "atarva", "strdust"]}}
+      ]
+    },
+    "trgt_config": {"type": "string"},
+    "longtr_config": {"type": "string"},
+    "atarva_config": {"type": "string"},
+    "strdust_config": {"type": "string"},
+    "consensus_config": {"type": "string"},
+    "outdir": {"type": "string", "minLength": 1}
+  }
+}

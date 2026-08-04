@@ -1,0 +1,67 @@
+schema_version: "1.0"
+generated_on: "2026-07-30"
+pipeline:
+  name: STRpadre
+  version: "0.1.0"
+  parser_schema_version: "1.0.0"
+base_images:
+  debian:
+    image: docker.io/library/debian:12.12-slim
+    immutable_digest: null
+    digest_note: >-
+      The exact Debian point-release tag is pinned. Resolve and record an OCI digest
+      in a site image-lock file before production promotion because registry digests
+      are architecture-specific.
+  python:
+    image: docker.io/library/python:3.12.11-slim-bookworm
+    immutable_digest: null
+    digest_note: See Debian digest note above.
+tools:
+  trgt:
+    version: "5.1.0"
+    source_url: https://github.com/PacificBiosciences/trgt
+    source_revision: b21c6217eeaef9a080205932fe29f730dc00e31f
+    license: Pacific Biosciences Software License Agreement
+    license_restriction: >-
+      Use only to process or analyse data generated on a PacBio instrument or
+      otherwise provided by PacBio. Do not use with ONT data.
+    container: local/strpadre-trgt:5.1.0
+  longtr:
+    version: "1.2"
+    source_url: https://github.com/gymrek-lab/LongTR
+    source_revision: fd73e0d45f239601a12854275ab4efa588010caf
+    license: GPL-2.0-only
+    container: local/strpadre-longtr:1.2
+  atarva:
+    version: "0.7.1"
+    source_url: https://github.com/SowpatiLab/ATaRVa
+    source_revision: d20409ff4d6ee465dccf23706ffd1a5e36a299bc
+    license: MIT
+    container: local/strpadre-atarva:0.7.1
+  strdust:
+    version: "0.20.0"
+    source_url: https://github.com/wdecoster/STRdust
+    source_revision: c79c674117181e8c7cc9d31c5755dcd884a222e8
+    license: MIT
+    container: local/strpadre-strdust:0.20.0
+  normalizer_consensus:
+    version: "1.0.0"
+    source_url: local://bin
+    license: MIT
+    container: local/strpadre-normalizer:1.0.0
+dependencies:
+  python: "3.12.11"
+  pysam: "0.23.0"
+  PyYAML: "6.0.2"
+  jsonschema: "4.23.0"
+  samtools: "1.21"
+  bcftools: "1.21"
+build_policy:
+  build_in_workflow: false
+  source_checkout: shallow_pinned_commit
+  run_as_non_root: true
+resolved_images:
+  normalizer_base:
+    image: mambaorg/micromamba:2.0.5@sha256:8d0d4cad074afe3ac93b58dce88bd2659153d3fa6de3a6968f501710e8d3c832
+  nextflow_test_runtime:
+    image: nextflow/nextflow:24.10.4@sha256:1d454794364a727a7d597faa7668c504b8fe965e867a19253889073da89833c3

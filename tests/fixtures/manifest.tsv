@@ -1,0 +1,2 @@
+locus_id	chr	start	end	coordinate_system	reference_build	primary_motif	repeat_structure	trgt_id	longtr_id	atarva_id	strdust_id
+L1	chr1	100	130	0-based-half-open	test-build	CAG		L1	L1	L1	chr1:101-130

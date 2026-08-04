@@ -1,0 +1,26 @@
+schema_version: "1.0"
+generated_on: "2026-07-30"
+builds:
+  normalizer_consensus:
+    image: local/strpadre-normalizer:1.0.0
+    local_image_id: sha256:3e33be18170597253c217f3c0d6e68e898e343768fc8c0efe02178ab37b63c6e
+    base_image: mambaorg/micromamba:2.0.5@sha256:8d0d4cad074afe3ac93b58dce88bd2659153d3fa6de3a6968f501710e8d3c832
+  longtr:
+    image: local/strpadre-longtr:1.2
+    local_image_id: sha256:40af87e3fe542775d968bc995492f638fba0861c7116d574b2dcb265e0605d93
+    source_revision: fd73e0d45f239601a12854275ab4efa588010caf
+  atarva:
+    image: local/strpadre-atarva:0.7.1
+    local_image_id: sha256:0f532b42e3e84ca7e82f7f4cef4b541bf0a57293643d98ede12a29cbf4130a93
+    source_revision: d20409ff4d6ee465dccf23706ffd1a5e36a299bc
+  strdust:
+    image: local/strpadre-strdust:0.20.0
+    local_image_id: sha256:68f05122208d0b0a28d7ca6dd875681f3369a12b6db6cc8fe9e4f99d6846eb6b
+    source_revision: c79c674117181e8c7cc9d31c5755dcd884a222e8
+    builder_image: rust:1.88.0-bookworm@sha256:af306cfa71d987911a781c37b59d7d67d934f49684058f96cf72079c3626bfe0
+  trgt:
+    image: local/strpadre-trgt:5.1.0
+    status: not_built
+    reason: >-
+      Requires a separately obtained, PacBio-license-authorized TRGT binary at
+      containers/vendor/trgt-5.1.0. The Dockerfile is intentionally fail-closed.

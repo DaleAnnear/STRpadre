@@ -1,0 +1,21 @@
+schema_version: "1.0"
+caller: longtr
+container: daleannear/strpadre:longtr-1.2
+tool_version: "1.2"
+reference_build: example-build
+platforms: [hifi, ont]
+native_catalog: ../examples/catalogs/longtr.bed
+threads: 1
+resources: { memory: 12 GB, time: 24h }
+phased_reads_expected: false
+additional_args: []
+options:
+  min_mapq: 20
+  min_mean_qual: 30
+  max_tr_len: 1000
+  min_reads: 10
+  indel_flank_len: 5
+  phased_bam: false
+  output_filters: true
+  haploid_chromosomes: []
+  require_read_groups: true

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "STRpadre consensus configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "minimum_caller_support", "absolute_allele_length_tolerance_bp", "relative_allele_length_tolerance", "copy_number_tolerance", "coordinate_tolerance_bp", "motif_equivalence", "missing_data_policy", "haploid_diploid_policy", "filtered_calls_may_contribute", "tie_breaking", "minimum_read_support", "consensus_statistic", "sequence_consensus", "allow_partial_results"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "minimum_caller_support": {"type": "integer", "minimum": 1},
+    "absolute_allele_length_tolerance_bp": {"type": "number", "minimum": 0},
+    "relative_allele_length_tolerance": {"type": "number", "minimum": 0},
+    "copy_number_tolerance": {"type": "number", "minimum": 0},
+    "coordinate_tolerance_bp": {"type": "integer", "minimum": 0},
+    "motif_equivalence": {"enum": ["exact", "rotations", "rotations_and_reverse_complements"]},
+    "missing_data_policy": {"enum": ["retain_statuses"]},
+    "haploid_diploid_policy": {"enum": ["require_same_ploidy", "allow_haploid_subset"]},
+    "filtered_calls_may_contribute": {"type": "boolean"},
+    "tie_breaking": {"enum": ["caller_name_then_input_path"]},
+    "minimum_read_support": {"type": "integer", "minimum": 0},
+    "consensus_statistic": {"enum": ["median"]},
+    "sequence_consensus": {"enum": ["disabled"]},
+    "allow_partial_results": {"const": false}
+  }
+}

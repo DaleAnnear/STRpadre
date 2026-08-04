@@ -1,0 +1,19 @@
+schema_version: "1.0"
+caller: trgt
+container: local/strpadre-trgt:5.1.0
+tool_version: "5.1.0"
+reference_build: example-build
+platforms: [hifi]
+native_catalog: ../examples/catalogs/trgt.bed
+threads: 4
+resources: { memory: 16 GB, time: 12h }
+phased_reads_expected: false
+additional_args: []
+options:
+  preset: wgs
+  genotyper: size
+  flank_len: 250
+  output_flank_len: 50
+  max_depth: 250
+  disable_bam_output: false
+  karyotype_default: XX

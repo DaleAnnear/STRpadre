@@ -1,0 +1,15 @@
+# TRGT is subject to the PacBio Software License Agreement.  The build context must
+# contain a user-acquired vendor/trgt-5.1.0 binary after the organisation accepts it.
+FROM local/strpadre-normalizer:1.0.0
+
+LABEL org.opencontainers.image.title="STRpadre TRGT adapter" \
+      org.opencontainers.image.version="5.1.0" \
+      org.opencontainers.image.licenses="Pacific Biosciences Software License Agreement" \
+      org.opencontainers.image.source="https://github.com/PacificBiosciences/trgt" \
+      org.opencontainers.image.revision="b21c6217eeaef9a080205932fe29f730dc00e31f"
+
+USER root
+COPY --chown=$MAMBA_USER:$MAMBA_USER containers/vendor/trgt-5.1.0 /usr/local/bin/trgt
+RUN chmod 0555 /usr/local/bin/trgt && trgt --version | grep -F '5.1.0'
+USER $MAMBA_USER
+WORKDIR /work
