@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python-and-nextflow-stub:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python -m pip install -r requirements-test.txt
+      - run: python -m py_compile bin/*.py
+      - run: ruff check bin tests
+      - run: pytest -q
+      - run: bash tests/test_nextflow_stub.sh
+  docker-normalizer-integration:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/test_docker_integration.sh

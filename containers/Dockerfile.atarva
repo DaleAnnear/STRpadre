@@ -1,0 +1,15 @@
+FROM local/strpadre-normalizer:1.0.0
+
+LABEL org.opencontainers.image.title="STRpadre ATaRVa adapter" \
+      org.opencontainers.image.version="0.7.1" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/SowpatiLab/ATaRVa" \
+      org.opencontainers.image.revision="d20409ff4d6ee465dccf23706ffd1a5e36a299bc"
+
+USER root
+RUN apt-get update && apt-get install --yes --no-install-recommends build-essential zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && micromamba run --name base python -m pip install --no-cache-dir ATaRVa==0.7.1 \
+    && micromamba run --name base atarva --version
+USER $MAMBA_USER
+WORKDIR /work

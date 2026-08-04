@@ -1,0 +1,24 @@
+schema_version: "1.0"
+caller: atarva
+container: daleannear/strpadre:atarva-0.7.1
+tool_version: "0.7.1"
+reference_build: example-build
+platforms: [hifi, ont]
+native_catalog: ../examples/catalogs/atarva.bed.gz
+native_catalog_index: ../examples/catalogs/atarva.bed.gz.tbi
+threads: 4
+resources: { memory: 16 GB, time: 24h }
+phased_reads_expected: false
+additional_args: []
+options:
+  map_qual: 5
+  min_reads: 10
+  max_reads: 100
+  snp_dist: 3000
+  snp_count: 3
+  snp_qual: 20
+  flank: 10
+  haplotag: HP
+  decompose: true
+  loci_wise: false
+  karyotype_default: XX

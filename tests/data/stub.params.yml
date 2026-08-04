@@ -1,0 +1,11 @@
+samplesheet: tests/data/stub.samples.csv
+reference: tests/data/reference.fa
+reference_fai: tests/data/reference.fa.fai
+locus_manifest: tests/fixtures/manifest.tsv
+trgt_config: configs/trgt.yml
+longtr_config: configs/longtr.yml
+atarva_config: configs/atarva.yml
+strdust_config: configs/strdust.yml
+consensus_config: configs/consensus.yml
+outdir: tests/output/stub
+callers: [trgt]

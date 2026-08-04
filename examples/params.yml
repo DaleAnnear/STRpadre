@@ -1,0 +1,12 @@
+samplesheet: examples/samples.csv
+reference: examples/reference/tiny.fa
+reference_fai: examples/reference/tiny.fa.fai
+reference_dict: null
+locus_manifest: examples/loci.tsv
+trgt_config: configs/trgt.yml
+longtr_config: configs/longtr.yml
+atarva_config: configs/atarva.yml
+strdust_config: configs/strdust.yml
+consensus_config: configs/consensus.yml
+outdir: results
+callers: [trgt, longtr, atarva, strdust]

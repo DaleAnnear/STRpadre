@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=75.8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strpadre"
+version = "0.1.0"
+description = "Reproducible long-read tandem-repeat genotyping workflow"
+requires-python = ">=3.11"
+dependencies = [
+  "PyYAML==6.0.2",
+  "jsonschema==4.23.0",
+  "pysam==0.23.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest==8.3.5", "ruff==0.11.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["bin"]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

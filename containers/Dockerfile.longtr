@@ -1,0 +1,27 @@
+FROM local/strpadre-normalizer:1.0.0 AS build
+
+ARG LONGTR_REVISION=fd73e0d45f239601a12854275ab4efa588010caf
+USER root
+RUN apt-get update && apt-get install --yes --no-install-recommends \
+      build-essential cmake git autoconf automake libtool libgtest-dev \
+      zlib1g-dev libbz2-dev liblzma-dev libdeflate-dev libcurl4-openssl-dev libssl-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && git config --global url."https://github.com/".insteadOf git@github.com: \
+    && git clone https://github.com/gymrek-lab/LongTR.git /opt/LongTR \
+    && git -C /opt/LongTR checkout --detach ${LONGTR_REVISION} \
+    && make -C /opt/LongTR
+
+FROM local/strpadre-normalizer:1.0.0
+LABEL org.opencontainers.image.title="STRpadre LongTR adapter" \
+      org.opencontainers.image.version="1.2" \
+      org.opencontainers.image.licenses="GPL-2.0-only" \
+      org.opencontainers.image.source="https://github.com/gymrek-lab/LongTR" \
+      org.opencontainers.image.revision="fd73e0d45f239601a12854275ab4efa588010caf"
+USER root
+RUN apt-get update && apt-get install --yes --no-install-recommends \
+      libdeflate0 libbz2-1.0 liblzma5 libcurl4 libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build --chown=$MAMBA_USER:$MAMBA_USER /opt/LongTR/LongTR /usr/local/bin/LongTR
+RUN chmod 0555 /usr/local/bin/LongTR && LongTR --help >/dev/null
+USER $MAMBA_USER
+WORKDIR /work

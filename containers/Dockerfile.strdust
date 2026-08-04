@@ -1,0 +1,25 @@
+FROM rust:1.88.0-bookworm@sha256:af306cfa71d987911a781c37b59d7d67d934f49684058f96cf72079c3626bfe0 AS build
+
+ARG STRDUST_REVISION=c79c674117181e8c7cc9d31c5755dcd884a222e8
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends git pkg-config libssl-dev clang libclang-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && git clone https://github.com/wdecoster/STRdust.git /opt/STRdust \
+    && cd /opt/STRdust \
+    && git checkout "$STRDUST_REVISION" \
+    && cargo build --release --locked
+
+FROM local/strpadre-normalizer:1.0.0
+
+LABEL org.opencontainers.image.source="https://github.com/wdecoster/STRdust" \
+      org.opencontainers.image.version="0.20.0" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.revision="c79c674117181e8c7cc9d31c5755dcd884a222e8"
+
+COPY --from=build /opt/STRdust/target/release/STRdust /usr/local/bin/STRdust
+
+USER root
+RUN chmod 0755 /usr/local/bin/STRdust \
+    && STRdust --version
+USER mambauser
