@@ -6,3 +6,4 @@ __pycache__/
 .pytest_cache/
 .coverage
 .ruff_cache/
+containers/vendor/trgt-5.1.0
