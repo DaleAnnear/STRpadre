@@ -12,7 +12,6 @@ include { NORMALIZE_ATARVA } from './modules/local/normalize_atarva'
 include { NORMALIZE_STRDUST } from './modules/local/normalize_strdust'
 include { CONSENSUS } from './modules/local/consensus'
 
-def supportedCallers = ['trgt', 'longtr', 'atarva', 'strdust']
 
 def normalizeCallers(value) {
     if (value == null) {
