@@ -1,5 +1,4 @@
 nextflow.enable.dsl=2
-import groovy.yaml.YamlSlurper
 
 
 include { VALIDATE_INPUTS } from './modules/local/validate_inputs'
@@ -36,7 +35,7 @@ def normalizeCallers(value) {
 def loadCallerConfig(String configPath) {
     def cfgFile = new File(configPath)
     if (!cfgFile.exists()) error "Caller configuration does not exist: ${configPath}"
-    return new YamlSlurper().parse(cfgFile)
+    return new groovy.yaml.YamlSlurper().parse(cfgFile)
 }
 
 def resolveConfigPath(String configPath, String childPath) {
