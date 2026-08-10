@@ -70,8 +70,16 @@ def test_unsafe_extra_argument_is_rejected(tmp_path: Path) -> None:
     config["additional_args"] = [";rm"]
     path = tmp_path / "config.yml"; path.write_text(yaml.safe_dump(config))
     try:
-        validate_inputs.validate_caller_config("strdust", path, path, "test-build")
+        validate_inputs.validate_caller_config("strdust", path, path)
     except validate_inputs.ValidationError as error:
         assert error
     else:
         raise AssertionError("unsafe argument accepted")
+
+
+def test_caller_config_reference_build_is_optional(tmp_path: Path) -> None:
+    config = caller_config("strdust")
+    del config["reference_build"]
+    path = tmp_path / "config.yml"
+    path.write_text(yaml.safe_dump(config))
+    validate_inputs.validate_caller_config("strdust", path, path)

@@ -247,8 +247,9 @@ callers: [longtr, atarva, strdust]
 ~~~
 
 For each selected caller, update an analysis-specific YAML copy with the correct
-<code>reference_build</code>, <code>native_catalog</code>, and - where relevant - ATaRVa
-<code>native_catalog_index</code>. Point the matching <code>*_config</code> field in
+<code>native_catalog</code> and - where relevant - ATaRVa <code>native_catalog_index</code>.
+<code>reference_build</code> is optional caller metadata; the canonical manifest remains
+the source of reference-build provenance. Point the matching <code>*_config</code> field in
 <code>params.yml</code> to those copies. Configuration schemas validate these files
 before callers launch.
 

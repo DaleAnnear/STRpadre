@@ -132,13 +132,11 @@ def valid_additional_args(caller: str, args: list[str]) -> None:
             fail(f"{caller}: additional_args may not replace workflow-owned input/output argument {token}")
 
 
-def validate_caller_config(caller: str, config_path: Path, expected_catalog: Path, build: str) -> dict[str, Any]:
+def validate_caller_config(caller: str, config_path: Path, expected_catalog: Path) -> dict[str, Any]:
     cfg = load_yaml(config_path)
     validate_schema(cfg, "caller.schema.json", config_path)
     if cfg["caller"] != caller:
         fail(f"{config_path}: caller must be {caller}")
-    if cfg["reference_build"] != build:
-        fail(f"{caller}: reference_build ({cfg['reference_build']}) differs from manifest ({build})")
     if set(cfg["platforms"]) != PLATFORMS[caller]:
         fail(f"{caller}: platforms must be exactly {sorted(PLATFORMS[caller])}; platform support is not user-overridable")
     if cfg["threads"] != 1 and caller == "longtr":
@@ -321,7 +319,7 @@ def main() -> int:
         configs = {}
         mappings: list[dict[str, str]] = []
         for caller in CALLERS:
-            config = validate_caller_config(caller, Path(getattr(args, f"{caller}_config")), Path(getattr(args, f"{caller}_catalog")), build)
+            config = validate_caller_config(caller, Path(getattr(args, f"{caller}_config")), Path(getattr(args, f"{caller}_catalog")))
             configs[caller] = config
             if caller == "atarva":
                 catalog_index = Path(args.atarva_catalog_index)
