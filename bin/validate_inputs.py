@@ -273,11 +273,11 @@ def validate_samples(path: Path, fai: dict[str, int], required_contigs: set[str]
                 fail(f"{sample}: alignment has no @SQ records")
             missing = sorted(required_contigs - set(sq))
             if missing:
-                fail(f"{sample}: alignment lacks contigs required by the locus manifest: {missing[:3]}")
+                fail(f'{sample}: alignment lacks contigs required by the locus manifest: {", ".join(missing)}')
             mismatches = [contig for contig in required_contigs if sq[contig] != fai[contig]]
             if mismatches:
                 fail(f"{sample}: alignment and reference disagree on contig lengths: {mismatches[:3]}")
-            if alignment.header.get("HD", {}).get("SO") != "coordinate":
+            if (header.get("HD") or {}).get("SO") != "coordinate":
                 fail(f"{sample}: alignment @HD SO must be coordinate")
     return rows
 
@@ -316,7 +316,7 @@ def main() -> int:
         required_contigs = {row["chr"] for row in loci.values()}
         missing_reference_contigs = sorted(required_contigs - set(fai))
         if missing_reference_contigs:
-            fail(f"Reference FAI lacks contigs required by the locus manifest: {missing_reference_contigs[:3]}")
+            fail(f'Reference FAI lacks contigs required by the locus manifest: {", ".join(missing_reference_contigs)}')
         samples = validate_samples(Path(args.samplesheet), fai, required_contigs, reference, args.staged_alignment_dir, not args.skip_alignment_header_check)
         configs = {}
         mappings: list[dict[str, str]] = []
