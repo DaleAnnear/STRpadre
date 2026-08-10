@@ -4,8 +4,6 @@ container: daleannear/strpadre:atarva-0.7.1
 tool_version: "0.7.1"
 reference_build: example-build
 platforms: [hifi, ont]
-native_catalog: ../examples/catalogs/atarva.bed.gz
-native_catalog_index: ../examples/catalogs/atarva.bed.gz.tbi
 threads: 4
 resources: { memory: 16 GB, time: 24h }
 phased_reads_expected: false

@@ -4,7 +4,6 @@ container: daleannear/strpadre:longtr-1.2
 tool_version: "1.2"
 reference_build: example-build
 platforms: [hifi, ont]
-native_catalog: ../examples/catalogs/longtr.bed
 threads: 1
 resources: { memory: 12 GB, time: 24h }
 phased_reads_expected: false

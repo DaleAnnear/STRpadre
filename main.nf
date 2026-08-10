@@ -2,6 +2,7 @@ nextflow.enable.dsl=2
 
 
 include { VALIDATE_INPUTS } from './modules/local/validate_inputs'
+include { CATALOG_ADAPTER } from './modules/local/catalog_adapter'
 include { TRGT } from './modules/local/trgt'
 include { LONGTR } from './modules/local/longtr'
 include { ATARVA } from './modules/local/atarva'
@@ -37,12 +38,6 @@ def loadCallerConfig(String configPath) {
     return new groovy.yaml.YamlSlurper().parse(cfgFile)
 }
 
-def resolveConfigPath(String configPath, String childPath) {
-    if (!childPath) error "native_catalog is required in ${configPath}"
-    def candidate = new File(childPath)
-    return (candidate.isAbsolute() ? candidate : new File(new File(configPath).parentFile, childPath)).canonicalPath
-}
-
 workflow {
     callers = normalizeCallers(params.callers)
     required = ['samplesheet', 'reference', 'reference_fai', 'locus_manifest']
@@ -66,19 +61,25 @@ workflow {
     atarvaConfig = file(params.atarva_config, checkIfExists: true)
     strdustConfig = file(params.strdust_config, checkIfExists: true)
     consensusConfig = file(params.consensus_config, checkIfExists: true)
-    trgtCatalog = file(resolveConfigPath(params.trgt_config, trgtCfg.native_catalog as String), checkIfExists: true)
-    longtrCatalog = file(resolveConfigPath(params.longtr_config, longtrCfg.native_catalog as String), checkIfExists: true)
-    atarvaCatalog = file(resolveConfigPath(params.atarva_config, atarvaCfg.native_catalog as String), checkIfExists: true)
-    atarvaCatalogIndex = file(resolveConfigPath(params.atarva_config,
-        (atarvaCfg.native_catalog_index ?: "${atarvaCfg.native_catalog}.tbi") as String), checkIfExists: true)
-    strdustCatalog = file(resolveConfigPath(params.strdust_config, strdustCfg.native_catalog as String), checkIfExists: true)
+    CATALOG_ADAPTER(Channel.of(tuple(manifest, referenceFai, 'trgt,longtr,atarva,strdust')))
+    catalogAssets = CATALOG_ADAPTER.out.catalogs.map { catalogDir ->
+        tuple(
+            catalogDir.resolve('trgt.bed'),
+            catalogDir.resolve('longtr.bed'),
+            catalogDir.resolve('atarva.bed.gz'),
+            catalogDir.resolve('atarva.bed.gz.tbi'),
+            catalogDir.resolve('strdust.bed')
+        )
+    }
 
-    validationInput = Channel.of(tuple(
-        sampleSheet, reference, referenceFai, manifest,
-        trgtConfig, trgtCatalog, longtrConfig, longtrCatalog,
-        atarvaConfig, atarvaCatalog, atarvaCatalogIndex,
-        strdustConfig, strdustCatalog, consensusConfig, callers.join(',')
-    ))
+    validationInput = catalogAssets.map { trgtCatalog, longtrCatalog, atarvaCatalog, atarvaCatalogIndex, strdustCatalog ->
+        tuple(
+            sampleSheet, reference, referenceFai, manifest,
+            trgtConfig, trgtCatalog, longtrConfig, longtrCatalog,
+            atarvaConfig, atarvaCatalog, atarvaCatalogIndex,
+            strdustConfig, strdustCatalog, consensusConfig, callers.join(',')
+        )
+    }
     alignmentAssets = Channel.fromPath(params.samplesheet, checkIfExists: true)
         .splitCsv(header: true)
         .map { row -> [file(row.alignment.toString(), checkIfExists: true), file(row.alignment_index.toString(), checkIfExists: true)] }
@@ -86,6 +87,11 @@ workflow {
         .collect()
     VALIDATE_INPUTS(validationInput, alignmentAssets)
     validationGate = VALIDATE_INPUTS.out.validated
+    trgtCatalog = catalogAssets.map { it[0] }
+    longtrCatalog = catalogAssets.map { it[1] }
+    atarvaCatalog = catalogAssets.map { it[2] }
+    atarvaCatalogIndex = catalogAssets.map { it[3] }
+    strdustCatalog = catalogAssets.map { it[4] }
 
     samples = Channel.fromPath(params.samplesheet, checkIfExists: true)
         .splitCsv(header: true)
@@ -98,14 +104,26 @@ workflow {
             )
         }
 
-    TRGT(samples.filter { it[1] == 'hifi' && callers.contains('trgt') }.combine(validationGate)
-        .map { s, p, a, i, sex, ploidy, gate -> tuple(s, p, a, i, sex, ploidy, reference, referenceFai, trgtCatalog, trgtConfig, gate) })
-    LONGTR(samples.filter { it[1] in ['hifi', 'ont'] && callers.contains('longtr') }.combine(validationGate)
-        .map { s, p, a, i, sex, ploidy, gate -> tuple(s, p, a, i, sex, ploidy, reference, referenceFai, longtrCatalog, longtrConfig, gate) })
-    ATARVA(samples.filter { it[1] in ['hifi', 'ont'] && callers.contains('atarva') }.combine(validationGate)
-        .map { s, p, a, i, sex, ploidy, gate -> tuple(s, p, a, i, sex, ploidy, reference, referenceFai, atarvaCatalog, atarvaCatalogIndex, atarvaConfig, gate) })
-    STRDUST(samples.filter { it[1] in ['hifi', 'ont'] && callers.contains('strdust') }.combine(validationGate)
-        .map { s, p, a, i, sex, ploidy, gate -> tuple(s, p, a, i, sex, ploidy, reference, referenceFai, strdustCatalog, strdustConfig, gate) })
+    TRGT(samples.filter { it[1] == 'hifi' && callers.contains('trgt') }
+        .combine(validationGate).combine(trgtCatalog)
+        .map { sampleId, platform, alignment, alignmentIndex, sex, ploidy, gate, catalog ->
+            tuple(sampleId, platform, alignment, alignmentIndex, sex, ploidy, reference, referenceFai, catalog, trgtConfig, gate)
+        })
+    LONGTR(samples.filter { it[1] in ['hifi', 'ont'] && callers.contains('longtr') }
+        .combine(validationGate).combine(longtrCatalog)
+        .map { sampleId, platform, alignment, alignmentIndex, sex, ploidy, gate, catalog ->
+            tuple(sampleId, platform, alignment, alignmentIndex, sex, ploidy, reference, referenceFai, catalog, longtrConfig, gate)
+        })
+    ATARVA(samples.filter { it[1] in ['hifi', 'ont'] && callers.contains('atarva') }
+        .combine(validationGate).combine(atarvaCatalog).combine(atarvaCatalogIndex)
+        .map { sampleId, platform, alignment, alignmentIndex, sex, ploidy, gate, catalog, catalogIndex ->
+            tuple(sampleId, platform, alignment, alignmentIndex, sex, ploidy, reference, referenceFai, catalog, catalogIndex, atarvaConfig, gate)
+        })
+    STRDUST(samples.filter { it[1] in ['hifi', 'ont'] && callers.contains('strdust') }
+        .combine(validationGate).combine(strdustCatalog)
+        .map { sampleId, platform, alignment, alignmentIndex, sex, ploidy, gate, catalog ->
+            tuple(sampleId, platform, alignment, alignmentIndex, sex, ploidy, reference, referenceFai, catalog, strdustConfig, gate)
+        })
 
     NORMALIZE_TRGT(TRGT.out.calls.map { s, p, native_dir -> tuple(s, p, native_dir, manifest) })
     NORMALIZE_LONGTR(LONGTR.out.calls.map { s, p, native_dir -> tuple(s, p, native_dir, manifest) })

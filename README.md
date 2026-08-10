@@ -227,11 +227,9 @@ nextflow run catalogs.nf -profile docker \
   --outdir catalog-build
 ~~~
 
-For TRGT, use a reviewed native catalog whenever a conversion would lose structure.
-The adapter only creates a TRGT entry for a simple single-motif locus. See
-[docs/catalog-adapter.md](docs/catalog-adapter.md) for catalog formats and update
-analysis-specific copies of the caller YAML files to point at the resulting catalogs.
-ATaRVa also requires the corresponding <code>.bed.gz.tbi</code> index.
+Catalogues are generated from the supplied locus manifest and reference FAI. See
+[docs/catalog-adapter.md](docs/catalog-adapter.md) for their caller-specific formats.
+ATaRVa includes its corresponding <code>.bed.gz.tbi</code> index automatically.
 
 ### Configure <code>params.yml</code>
 
@@ -246,12 +244,7 @@ outdir: results
 callers: [longtr, atarva, strdust]
 ~~~
 
-For each selected caller, update an analysis-specific YAML copy with the correct
-<code>native_catalog</code> and - where relevant - ATaRVa <code>native_catalog_index</code>.
-<code>reference_build</code> is optional caller metadata; the canonical manifest remains
-the source of reference-build provenance. Point the matching <code>*_config</code> field in
-<code>params.yml</code> to those copies. Configuration schemas validate these files
-before callers launch.
+Caller catalogues are generated automatically from `--locus-manifest` and `--reference-fai` for every supported genotyper. Caller YAML files configure the image and caller options only; `reference_build` is optional caller metadata. The canonical manifest remains the source of reference-build provenance.
 
 <code>additional_args</code> is an argv list, not a shell fragment. It rejects
 whitespace, shell metacharacters, and caller input/output flags owned by the workflow.

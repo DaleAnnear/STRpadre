@@ -3,7 +3,7 @@
   "title": "STRpadre caller configuration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "caller", "container", "tool_version", "platforms", "native_catalog", "threads", "resources", "phased_reads_expected", "additional_args", "options"],
+  "required": ["schema_version", "caller", "container", "tool_version", "platforms", "threads", "resources", "phased_reads_expected", "additional_args", "options"],
   "properties": {
     "schema_version": {"const": "1.0"},
     "caller": {"enum": ["trgt", "longtr", "atarva", "strdust"]},
