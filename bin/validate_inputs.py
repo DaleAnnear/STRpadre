@@ -232,7 +232,7 @@ def stage_path(original: str, staged_dir: Path | None) -> Path:
     return path
 
 
-def validate_samples(path: Path, fai: dict[str, int], reference: Path, staged_dir: Path | None, check_headers: bool) -> list[dict[str, str]]:
+def validate_samples(path: Path, fai: dict[str, int], required_contigs: set[str], reference: Path, staged_dir: Path | None, check_headers: bool) -> list[dict[str, str]]:
     required = {"sample_id", "platform", "alignment", "alignment_index"}
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
@@ -271,11 +271,12 @@ def validate_samples(path: Path, fai: dict[str, int], reference: Path, staged_di
             sq = {entry.get("SN"): entry.get("LN") for entry in header.get("SQ", [])}
             if not sq:
                 fail(f"{sample}: alignment has no @SQ records")
-            mismatches = [contig for contig, length in fai.items() if contig in sq and sq[contig] != length]
+            missing = sorted(required_contigs - set(sq))
+            if missing:
+                fail(f"{sample}: alignment lacks contigs required by the locus manifest: {missing[:3]}")
+            mismatches = [contig for contig in required_contigs if sq[contig] != fai[contig]]
             if mismatches:
                 fail(f"{sample}: alignment and reference disagree on contig lengths: {mismatches[:3]}")
-            if not set(sq).issubset(fai):
-                fail(f"{sample}: alignment uses contigs absent from reference FAI")
             if alignment.header.get("HD", {}).get("SO") != "coordinate":
                 fail(f"{sample}: alignment @HD SO must be coordinate")
     return rows
@@ -312,7 +313,11 @@ def main() -> int:
             fail("Reference FASTA and .fai must exist")
         fai = read_fai(fai_path)
         loci, build = read_manifest(Path(args.locus_manifest))
-        samples = validate_samples(Path(args.samplesheet), fai, reference, args.staged_alignment_dir, not args.skip_alignment_header_check)
+        required_contigs = {row["chr"] for row in loci.values()}
+        missing_reference_contigs = sorted(required_contigs - set(fai))
+        if missing_reference_contigs:
+            fail(f"Reference FAI lacks contigs required by the locus manifest: {missing_reference_contigs[:3]}")
+        samples = validate_samples(Path(args.samplesheet), fai, required_contigs, reference, args.staged_alignment_dir, not args.skip_alignment_header_check)
         configs = {}
         mappings: list[dict[str, str]] = []
         for caller in CALLERS:
