@@ -7,7 +7,10 @@ LABEL org.opencontainers.image.title="STRpadre normalizer and consensus utilitie
       org.opencontainers.image.revision="pipeline-0.1.0"
 
 USER root
-RUN micromamba install --yes --name base --channel conda-forge --channel bioconda \
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends procps \
+    && rm -rf /var/lib/apt/lists/* \
+    && micromamba install --yes --name base --channel conda-forge --channel bioconda \
       python=3.12.11 pysam=0.23.0 pyyaml=6.0.2 jsonschema=4.23.0 bcftools=1.21 htslib=1.21 \
     && micromamba clean --all --yes
 USER $MAMBA_USER

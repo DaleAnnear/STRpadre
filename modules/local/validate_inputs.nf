@@ -6,9 +6,9 @@ process VALIDATE_INPUTS {
 
     input:
     tuple path(samplesheet), path(reference), path(reference_fai), path(manifest),
-          path(trgt_config), path(trgt_catalog), path(longtr_config), path(longtr_catalog),
-          path(atarva_config), path(atarva_catalog), path(atarva_catalog_index),
-          path(strdust_config), path(strdust_catalog), path(consensus_config), val(callers)
+          path(trgt_config, name: 'configs/trgt.yml'), path(trgt_catalog), path(longtr_config, name: 'configs/longtr.yml'), path(longtr_catalog),
+          path(atarva_config, name: 'configs/atarva.yml'), path(atarva_catalog), path(atarva_catalog_index),
+          path(strdust_config, name: 'configs/strdust.yml'), path(strdust_catalog), path(consensus_config), val(callers)
     path alignment_assets
 
     output:
