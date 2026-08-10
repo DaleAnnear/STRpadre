@@ -4,7 +4,6 @@ container: daleannear/strpadre:strdust-0.20.0
 tool_version: "0.20.0"
 reference_build: example-build
 platforms: [hifi, ont]
-native_catalog: ../examples/catalogs/strdust.bed
 threads: 4
 resources: { memory: 8 GB, time: 12h }
 phased_reads_expected: false

@@ -22,6 +22,7 @@ process CATALOG_ADAPTER {
     stub:
     """
     mkdir -p catalogs
+    touch catalogs/trgt.bed catalogs/longtr.bed catalogs/atarva.bed.gz catalogs/atarva.bed.gz.tbi catalogs/strdust.bed
     printf 'canonical_locus_id\\tcaller\\tnative_locus_id\\tchr\\tstart\\tend\\tmotif\\tcatalog_file\\tcatalog_coordinate_system\\n' > catalogs/catalog_locus_mapping.tsv
     printf '{"schema_version":"1.0","stub":true}\\n' > catalogs/catalog_adaptation_report.json
     """

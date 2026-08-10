@@ -83,3 +83,15 @@ def test_caller_config_reference_build_is_optional(tmp_path: Path) -> None:
     path = tmp_path / "config.yml"
     path.write_text(yaml.safe_dump(config))
     validate_inputs.validate_caller_config("strdust", path, path)
+
+
+
+def test_caller_config_native_catalog_is_optional(tmp_path):
+    config = caller_config('strdust')
+    config.pop('native_catalog')
+    config_path = tmp_path / 'strdust.yml'
+    config_path.write_text(yaml.safe_dump(config))
+    catalog_path = tmp_path / 'strdust.bed'
+    catalog_path.touch()
+
+    validate_inputs.validate_caller_config('strdust', config_path, catalog_path)

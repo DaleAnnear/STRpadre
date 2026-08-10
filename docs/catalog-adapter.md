@@ -44,11 +44,7 @@ complex locus into a scientifically misleading simple repeat.
 
 ## Using generated files in genotyping
 
-Set each selected caller's `native_catalog` to the generated file (and ATaRVa's
-`native_catalog_index` to `atarva.bed.gz.tbi`) in analysis-specific copies of the YAML
-configs. Keep the generated `catalog_adaptation_report.json` beside those configs.
-Then invoke `main.nf` normally. Its existing fail-fast preflight independently verifies
-the native catalogs, canonical mapping, reference build, and alignment contigs.
+`main.nf` invokes this adapter automatically, then passes its catalogues to input validation and to each caller. The generated files are the sole caller-catalogue source; static `native_catalog` entries in caller YAML files are not used. Run `catalogs.nf` or `bin/catalog_adapter.py` directly only when you want to inspect or archive the generated catalogues.
 
 `bin/catalog_adapter.py` is the underlying command-line program used by the Nextflow
 module. It accepts the same manifest, FAI, caller selection, and output directory
