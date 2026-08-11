@@ -17,4 +17,6 @@ options:
   phased_bam: false
   output_filters: true
   haploid_chromosomes: []
-  require_read_groups: true
+  # Default: treat each input sample as one library; avoids requiring @RG LB tags.
+  # Set true only when every read group has a valid LB tag and library-aware calling is wanted.
+  use_lb_tags: false
