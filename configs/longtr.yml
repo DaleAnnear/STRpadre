@@ -1,6 +1,6 @@
 schema_version: "1.0"
 caller: longtr
-container: daleannear/strpadre:longtr-1.2
+container: daleannear/strpadre:longtr-1.2-r1
 tool_version: "1.2"
 reference_build: example-build
 platforms: [hifi, ont]

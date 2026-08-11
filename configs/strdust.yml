@@ -1,6 +1,6 @@
 schema_version: "1.0"
 caller: strdust
-container: daleannear/strpadre:strdust-0.20.0
+container: daleannear/strpadre:strdust-0.20.0-r1
 tool_version: "0.20.0"
 reference_build: example-build
 platforms: [hifi, ont]

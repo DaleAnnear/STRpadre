@@ -82,9 +82,9 @@ sample sheet + BAM/CRAM + reference + canonical loci
 | Caller | Pinned version | Platforms | Default container | Native catalog | Key requirement |
 |---|---:|---|---|---|---|
 | [TRGT](https://github.com/PacificBiosciences/trgt) | 5.1.0 | HiFi | <code>local/strpadre-trgt:5.1.0</code> | structured BED (<code>ID;MOTIFS;STRUC</code>) | Locally built from a separately authorised PacBio binary |
-| [LongTR](https://github.com/gymrek-lab/LongTR) | 1.2 | HiFi, ONT | <code>daleannear/strpadre:longtr-1.2</code> | 1-based-start BED, motif, optional name | Coordinate-sorted/indexed BAM/CRAM with valid read-group metadata |
-| [ATaRVa](https://github.com/SowpatiLab/ATaRVa) | 0.7.1 | HiFi, ONT | <code>daleannear/strpadre:atarva-0.7.1</code> | sorted bgzip+tabix BED | Coordinate-sorted BAM/CRAM; MD/CS or <code>=/X</code> CIGAR is preferred |
-| [STRdust](https://github.com/wdecoster/STRdust) | 0.20.0 | HiFi, ONT | <code>daleannear/strpadre:strdust-0.20.0</code> | standard BED | BAM/CRAM plus reference; choose the unphased policy explicitly |
+| [LongTR](https://github.com/gymrek-lab/LongTR) | 1.2 | HiFi, ONT | <code>daleannear/strpadre:longtr-1.2-r1</code> | 1-based-start BED, motif, optional name | Coordinate-sorted/indexed BAM/CRAM with valid read-group metadata |
+| [ATaRVa](https://github.com/SowpatiLab/ATaRVa) | 0.7.1 | HiFi, ONT | <code>daleannear/strpadre:atarva-0.7.1-r1</code> | sorted bgzip+tabix BED | Coordinate-sorted BAM/CRAM; MD/CS or <code>=/X</code> CIGAR is preferred |
+| [STRdust](https://github.com/wdecoster/STRdust) | 0.20.0 | HiFi, ONT | <code>daleannear/strpadre:strdust-0.20.0-r1</code> | standard BED | BAM/CRAM plus reference; choose the unphased policy explicitly |
 
 The caller configuration files in [configs/](configs) define the image, catalog,
 platform support, resource request, and safe caller options. Exact source revisions
@@ -128,10 +128,10 @@ LongTR, ATaRVa, STRdust, and the normaliser/consensus image are published on
 automatically on the first run, or you can fetch them ahead of time:
 
 ~~~bash
-docker pull daleannear/strpadre:normalizer-1.0.0
-docker pull daleannear/strpadre:longtr-1.2
-docker pull daleannear/strpadre:atarva-0.7.1
-docker pull daleannear/strpadre:strdust-0.20.0
+docker pull daleannear/strpadre:normalizer-1.0.0-r1
+docker pull daleannear/strpadre:longtr-1.2-r1
+docker pull daleannear/strpadre:atarva-0.7.1-r1
+docker pull daleannear/strpadre:strdust-0.20.0-r1
 ~~~
 
 These are the default runtime images in <code>nextflow.config</code> and the
