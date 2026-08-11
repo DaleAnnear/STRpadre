@@ -97,6 +97,8 @@ def build_command(caller: str, config: dict[str, Any], ns: argparse.Namespace, o
         haploid = option(config, "haploid_chromosomes", [])
         if haploid:
             append_if(command, "--haploid-chrs", ",".join(haploid))
+        if not option(config, "use_lb_tags", False):
+            command.append("--lib-from-samp")
         command.extend(extra)
         return command, raw_vcf, False
     if caller == "atarva":

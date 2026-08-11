@@ -290,6 +290,11 @@ identity match. Resource defaults are process labels in
 them. Do not change a caller's <code>threads</code> setting without consulting that
 caller's documentation - LongTR is deliberately fixed at one calling thread.
 
+LongTR uses <code>--lib-from-samp</code> by default, so each sample BAM/CRAM is treated
+as one library and <code>@RG</code> <code>LB</code> tags are not required. Set
+<code>options.use_lb_tags: true</code> in the LongTR YAML configuration only when every
+read group carries a valid <code>LB</code> tag and library-aware calling is desired.
+
 ## Outputs and consensus <a name="outputs-and-consensus"></a>
 
 With <code>--outdir results</code>, STRpadre creates predictable,

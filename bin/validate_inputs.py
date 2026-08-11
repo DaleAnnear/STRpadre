@@ -24,7 +24,7 @@ CALLERS = ("trgt", "longtr", "atarva", "strdust")
 PLATFORMS = {"trgt": {"hifi"}, "longtr": {"hifi", "ont"}, "atarva": {"hifi", "ont"}, "strdust": {"hifi", "ont"}}
 OPTION_KEYS = {
     "trgt": {"preset", "genotyper", "flank_len", "output_flank_len", "max_depth", "disable_bam_output", "karyotype_default"},
-    "longtr": {"min_mapq", "min_mean_qual", "max_tr_len", "min_reads", "indel_flank_len", "phased_bam", "output_filters", "haploid_chromosomes", "require_read_groups"},
+    "longtr": {"min_mapq", "min_mean_qual", "max_tr_len", "min_reads", "indel_flank_len", "phased_bam", "output_filters", "haploid_chromosomes", "use_lb_tags"},
     "atarva": {"map_qual", "min_reads", "max_reads", "snp_dist", "snp_count", "snp_qual", "flank", "haplotag", "decompose", "loci_wise", "amplicon", "somatic", "karyotype_default"},
     "strdust": {"minlen", "support", "consensus_reads", "max_number_reads", "max_locus", "find_outliers", "phasing", "haploid_chromosomes"},
 }
@@ -150,6 +150,8 @@ def validate_caller_config(caller: str, config_path: Path, expected_catalog: Pat
     unknown_options = set(cfg["options"]) - OPTION_KEYS[caller]
     if unknown_options:
         fail(f"{caller}: unknown options are forbidden: {sorted(unknown_options)}")
+    if caller == "longtr" and not isinstance(cfg["options"].get("use_lb_tags", False), bool):
+        fail("longtr: options.use_lb_tags must be true or false")
     valid_additional_args(caller, cfg["additional_args"])
     return cfg
 
