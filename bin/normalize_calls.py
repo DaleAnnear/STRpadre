@@ -112,7 +112,8 @@ def info_text(record: VcfRecord, key: str) -> str:
 
 def native_coordinates(caller: str, record: VcfRecord) -> tuple[int, int, str | None, str | None]:
     if caller == "trgt":
-        return record.pos - 1, int(info_text(record, "END")), info_text(record, "TRID"), info_text(record, "MOTIFS").split(",")[0]
+        # TRGT reports POS as the repeat start; its padding base is represented in REF/ALT.
+        return record.pos, int(info_text(record, "END")), info_text(record, "TRID"), info_text(record, "MOTIFS").split(",")[0]
     if caller == "longtr":
         return int(info_text(record, "START")) - 1, int(info_text(record, "END")), None if record.record_id == MISSING else record.record_id, info_text(record, "MOTIF").split(",")[0]
     if caller == "atarva":
