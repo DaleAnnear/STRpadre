@@ -134,9 +134,7 @@ docker pull daleannear/strpadre:atarva-0.7.1-r1
 docker pull daleannear/strpadre:strdust-0.20.0-r1
 ~~~
 
-These are the default runtime images in <code>nextflow.config</code> and the
-non-TRGT caller YAML files. You do not need to build them locally for a normal
-LongTR/ATaRVa/STRdust run.
+These are the default runtime images in <code>nextflow.config</code>. The caller YAML files retain image metadata for validation and provenance; use the matching <code>*_container</code> parameter to override a runtime image.
 
 ### 3. Build TRGT locally when you need it
 

@@ -32,25 +32,10 @@ def normalizeCallers(value) {
     return names
 }
 
-def loadCallerConfig(String configPath) {
-    def cfgFile = new File(configPath)
-    if (!cfgFile.exists()) error "Caller configuration does not exist: ${configPath}"
-    return new groovy.yaml.YamlSlurper().parse(cfgFile)
-}
-
 workflow {
     callers = normalizeCallers(params.callers)
     required = ['samplesheet', 'reference', 'reference_fai', 'locus_manifest']
     required.each { key -> if (!params[key]) error "--${key.replace('_','-')} is required" }
-
-    trgtCfg = loadCallerConfig(params.trgt_config)
-    longtrCfg = loadCallerConfig(params.longtr_config)
-    atarvaCfg = loadCallerConfig(params.atarva_config)
-    strdustCfg = loadCallerConfig(params.strdust_config)
-    params.trgt_container = params.trgt_container ?: trgtCfg.container
-    params.longtr_container = params.longtr_container ?: longtrCfg.container
-    params.atarva_container = params.atarva_container ?: atarvaCfg.container
-    params.strdust_container = params.strdust_container ?: strdustCfg.container
 
     reference = file(params.reference, checkIfExists: true)
     referenceFai = file(params.reference_fai, checkIfExists: true)
