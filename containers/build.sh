@@ -63,7 +63,7 @@ if (( ${#selected[@]} == 0 )); then
 fi
 
 normalizer_local=local/strpadre-normalizer:1.0.0
-normalizer_hub=daleannear/strpadre:normalizer-1.0.0
+normalizer_hub=daleannear/strpadre:normalizer-1.0.0-r1
 
 pull_or_build() {
   local local_image=$1
@@ -84,7 +84,13 @@ pull_or_build() {
   if [[ "$requires_normalizer" == true ]]; then
     ensure_local_normalizer
   fi
-  docker build --pull --file "$dockerfile" --tag "$local_image" .
+  if [[ "$requires_normalizer" == true ]]; then
+    # Caller Dockerfiles use the local normalizer base. Do not pass --pull:
+    # BuildKit would otherwise try to find local/strpadre-normalizer on Docker Hub.
+    docker build --file "$dockerfile" --tag "$local_image" --tag "$hub_image" .
+  else
+    docker build --pull --file "$dockerfile" --tag "$local_image" --tag "$hub_image" .
+  fi
 }
 
 ensure_local_normalizer() {
@@ -99,13 +105,13 @@ for image in "${selected[@]}"; do
       pull_or_build "$normalizer_local" "$normalizer_hub" containers/Dockerfile.normalizer
       ;;
     longtr)
-      pull_or_build local/strpadre-longtr:1.2 daleannear/strpadre:longtr-1.2 containers/Dockerfile.longtr true
+      pull_or_build local/strpadre-longtr:1.2 daleannear/strpadre:longtr-1.2-r1 containers/Dockerfile.longtr true
       ;;
     atarva)
-      pull_or_build local/strpadre-atarva:0.7.1 daleannear/strpadre:atarva-0.7.1 containers/Dockerfile.atarva true
+      pull_or_build local/strpadre-atarva:0.7.1 daleannear/strpadre:atarva-0.7.1-r1 containers/Dockerfile.atarva true
       ;;
     strdust)
-      pull_or_build local/strpadre-strdust:0.20.0 daleannear/strpadre:strdust-0.20.0 containers/Dockerfile.strdust true
+      pull_or_build local/strpadre-strdust:0.20.0 daleannear/strpadre:strdust-0.20.0-r1 containers/Dockerfile.strdust true
       ;;
     trgt)
       if [[ -f containers/vendor/trgt-5.1.0 ]]; then

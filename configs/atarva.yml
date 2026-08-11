@@ -1,6 +1,6 @@
 schema_version: "1.0"
 caller: atarva
-container: daleannear/strpadre:atarva-0.7.1
+container: daleannear/strpadre:atarva-0.7.1-r1
 tool_version: "0.7.1"
 reference_build: example-build
 platforms: [hifi, ont]
