@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import os
 import shutil
@@ -140,10 +141,39 @@ def version_probe(caller: str) -> tuple[str, str]:
     return " ".join(probes[caller]), output
 
 
-def normalise_vcf(raw_vcf: Path, output: Path, log: Path) -> None:
+LONGTR_DFLANKINDEL_HEADER = (
+    '##FORMAT=<ID=DFLANKINDEL,Number=.,Type=String,'
+    'Description="LongTR compatibility declaration">\n'
+)
+
+
+def repair_longtr_vcf_header(raw_vcf: Path) -> Path:
+    """Add LongTR's omitted DFLANKINDEL header declaration when needed."""
+    opener = gzip.open if raw_vcf.suffix == ".gz" else open
+    with opener(raw_vcf, "rt") as handle:
+        for line in handle:
+            if line.startswith("##FORMAT=<ID=DFLANKINDEL,"):
+                return raw_vcf
+            if line.startswith("#CHROM"):
+                break
+
+    repaired_vcf = raw_vcf.with_name(f"{raw_vcf.stem}.with-header{raw_vcf.suffix}")
+    with opener(raw_vcf, "rt") as source, opener(repaired_vcf, "wt") as destination:
+        for line in source:
+            if line.startswith("#CHROM"):
+                destination.write(LONGTR_DFLANKINDEL_HEADER)
+            destination.write(line)
+    return repaired_vcf
+
+
+def normalise_vcf(raw_vcf: Path, output: Path, log: Path, caller: str) -> None:
     if not raw_vcf.is_file() or raw_vcf.stat().st_size == 0:
         raise CallerError(f"Caller did not create a non-empty VCF: {raw_vcf}")
-    run([executable("bcftools"), "sort", "-Oz", "-o", str(output), str(raw_vcf)], log)
+    source_vcf = repair_longtr_vcf_header(raw_vcf) if caller == "longtr" else raw_vcf
+    if source_vcf != raw_vcf:
+        with log.open("a") as stderr_handle:
+            stderr_handle.write("Added missing LongTR DFLANKINDEL FORMAT header declaration.\n")
+    run([executable("bcftools"), "sort", "-Oz", "-o", str(output), str(source_vcf)], log)
     run([executable("tabix"), "-f", "-p", "vcf", str(output)], log)
 
 
@@ -178,7 +208,7 @@ def main() -> int:
         log = ns.output_dir / "caller.stderr.log"
         probe_command, actual_version = version_probe(ns.caller)
         run(command, log, raw_vcf if stdout_is_vcf else None)
-        normalise_vcf(raw_vcf, ns.output_dir / "calls.vcf.gz", log)
+        normalise_vcf(raw_vcf, ns.output_dir / "calls.vcf.gz", log, ns.caller)
         provenance = {"caller": ns.caller, "sample_id": ns.sample_id, "platform": ns.platform, "configured_tool_version": config["tool_version"], "executable_version_probe": probe_command, "executable_version_output": actual_version, "argv": command, "container": config["container"], "native_vcf": raw_vcf.name, "normalized_native_vcf": "calls.vcf.gz"}
         (ns.output_dir / "command.json").write_text(json.dumps(provenance, indent=2) + "\n")
         (ns.output_dir / "versions.yml").write_text(yaml.safe_dump({"caller": ns.caller, "configured_version": config["tool_version"], "executable_probe": probe_command, "executable_output": actual_version, "bcftools": command_output(["bcftools", "--version"]).splitlines()[0], "tabix": command_output(["tabix", "--version"]).splitlines()[0]}, sort_keys=False))
