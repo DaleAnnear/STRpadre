@@ -88,6 +88,19 @@ def load_manifest(path: Path) -> tuple[dict[str, dict[str, str]], str]:
     return rows, next(iter(builds))
 
 
+def vcf_locus_sort_key(locus: dict[str, str]) -> tuple[int, int, str, int, int, str]:
+    """Sort canonical human contigs naturally, then other contigs deterministically."""
+    contig = locus["chr"]
+    normalized = contig[3:] if contig.lower().startswith("chr") else contig
+    if normalized.isdigit() and 1 <= int(normalized) <= 22:
+        return (0, int(normalized), "", int(locus["start"]), int(locus["end"]), locus["locus_id"])
+    if normalized.upper() == "X":
+        return (0, 23, "", int(locus["start"]), int(locus["end"]), locus["locus_id"])
+    if normalized.upper() == "Y":
+        return (0, 24, "", int(locus["start"]), int(locus["end"]), locus["locus_id"])
+    return (1, 0, contig, int(locus["start"]), int(locus["end"]), locus["locus_id"])
+
+
 def load_samples(path: Path) -> list[dict[str, str]]:
     with path.open(newline="") as handle:
         rows = [{key: (value or "").strip() for key, value in row.items()} for row in csv.DictReader(handle)]
@@ -291,7 +304,7 @@ def main() -> int:
         with (args.output_dir / "consensus.vcf").open("w") as vcf:
             sample_ids = [sample["sample_id"] for sample in samples]
             vcf.write(vcf_header(sample_ids))
-            for locus_id, locus in loci.items():
+            for locus_id, locus in sorted(loci.items(), key=lambda item: vcf_locus_sort_key(item[1])):
                 sample_values, statuses, contributors, eligible, called = [], [], set(), 0, 0
                 for sample in samples:
                     result = per_sample_locus[(sample["sample_id"], locus_id)]

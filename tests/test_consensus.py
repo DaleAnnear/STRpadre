@@ -59,3 +59,33 @@ def test_end_to_end_consensus_retains_matrix_statuses(tmp_path: Path) -> None:
         matrix = list(csv.DictReader(handle, delimiter="\t"))
     assert any(row["sample_id"] == "S2" and row["caller"] == "trgt" and row["caller_status"] == "not_applicable_to_platform" for row in matrix)
     assert (out / "consensus.vcf").is_file()
+
+def test_consensus_vcf_is_sorted_when_manifest_is_not(tmp_path: Path) -> None:
+    sample_sheet = tmp_path / "samples.csv"
+    sample_sheet.write_text("sample_id,platform,alignment,alignment_index\nS1,hifi,a.bam,a.bai\n")
+    manifest = tmp_path / "manifest.tsv"
+    manifest.write_text(
+        "locus_id\tchr\tstart\tend\tcoordinate_system\treference_build\tprimary_motif\trepeat_structure\ttrgt_id\tlongtr_id\tatarva_id\tstrdust_id\n"
+        "L_HIGH\tchr1\t1000\t1030\t0-based-half-open\ttest-build\tCAG\t\tL_HIGH\tL_HIGH\tL_HIGH\tchr1:1001-1030\n"
+        "L_CHR10\tchr10\t10\t40\t0-based-half-open\ttest-build\tCAG\t\tL_CHR10\tL_CHR10\tL_CHR10\tchr10:11-40\n"
+        "L_LOW\tchr1\t100\t130\t0-based-half-open\ttest-build\tCAG\t\tL_LOW\tL_LOW\tL_LOW\tchr1:101-130\n"
+        "L_CHR2\tchr2\t10\t40\t0-based-half-open\ttest-build\tCAG\t\tL_CHR2\tL_CHR2\tL_CHR2\tchr2:11-40\n"
+        "L_X\tchrX\t10\t40\t0-based-half-open\ttest-build\tCAG\t\tL_X\tL_X\tL_X\tchrX:11-40\n"
+    )
+    normalized = tmp_path / "normal.tsv.gz"
+    with gzip.open(normalized, "wt", newline="") as handle:
+        csv.DictWriter(handle, fieldnames=sorted(build_consensus.REQUIRED_NORMALIZED), delimiter="\t").writeheader()
+
+    out = tmp_path / "out"
+    subprocess.run([
+        sys.executable, str(ROOT / "bin" / "build_consensus.py"), "--normalized-files", str(normalized),
+        "--locus-manifest", str(manifest), "--samplesheet", str(sample_sheet),
+        "--config", str(ROOT / "configs" / "consensus.yml"), "--callers", "trgt,longtr,atarva,strdust",
+        "--output-dir", str(out),
+    ], check=True)
+
+    records = [line.rstrip().split("\t") for line in (out / "consensus.vcf").read_text().splitlines() if not line.startswith("#")]
+    assert [(record[0], int(record[1]), record[2]) for record in records] == [
+        ("chr1", 101, "L_LOW"), ("chr1", 1001, "L_HIGH"), ("chr2", 11, "L_CHR2"),
+        ("chr10", 11, "L_CHR10"), ("chrX", 11, "L_X"),
+    ]
