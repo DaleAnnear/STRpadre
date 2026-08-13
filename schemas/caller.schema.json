@@ -17,6 +17,31 @@
     "resources": {"type": "object", "additionalProperties": false, "required": ["memory", "time"], "properties": {"memory": {"type": "string", "pattern": "^[1-9][0-9]* (MB|GB)$"}, "time": {"type": "string", "pattern": "^[1-9][0-9]*(m|h|d)$"}}},
     "phased_reads_expected": {"type": "boolean"},
     "additional_args": {"type": "array", "items": {"type": "string", "pattern": "^[^\\s;&|`$<>\\\\]+$"}},
-    "options": {"type": "object"}
+    "options": {"type": "object"},
+    "sex_chromosome_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "reference_build", "chromosome_x", "chromosome_y", "pseudoautosomal_regions"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "reference_build": {"type": "string", "minLength": 1},
+        "chromosome_x": {"type": "string", "minLength": 1},
+        "chromosome_y": {"type": "string", "minLength": 1},
+        "pseudoautosomal_regions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["chromosome", "start", "end"],
+            "properties": {
+              "chromosome": {"type": "string", "minLength": 1},
+              "start": {"type": "integer", "minimum": 0},
+              "end": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    }
   }
 }

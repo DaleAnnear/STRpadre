@@ -95,3 +95,28 @@ def test_caller_config_native_catalog_is_optional(tmp_path):
     catalog_path.touch()
 
     validate_inputs.validate_caller_config('strdust', config_path, catalog_path)
+
+def test_sex_aware_preflight_requires_sex_for_sex_chromosome_loci() -> None:
+    policy = {
+        "enabled": True,
+        "reference_build": "GRCh38",
+        "chromosome_x": "chrX",
+        "chromosome_y": "chrY",
+        "pseudoautosomal_regions": [{"chromosome": "chrX", "start": 10000, "end": 2781479}],
+    }
+    loci = {"X1": {"chr": "chrX", "start": "154437172", "end": "154437196"}}
+    samples = [{"sample_id": "S1", "sex": ""}]
+    configs = {"longtr": {"sex_chromosome_policy": policy}}
+
+    try:
+        validate_inputs.validate_sex_aware_samples(samples, loci, configs, ["longtr"], "GRCh38")
+    except validate_inputs.ValidationError as error:
+        assert "sex must be" in str(error)
+    else:
+        raise AssertionError("sex-aware preflight accepted missing sex metadata")
+
+def test_default_sex_aware_caller_configs_match_schema() -> None:
+    root = Path(__file__).parents[1]
+    for name in ("longtr", "strdust"):
+        path = root / "configs" / f"{name}.yml"
+        validate_inputs.validate_schema(yaml.safe_load(path.read_text()), "caller.schema.json", path)

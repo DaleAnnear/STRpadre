@@ -201,6 +201,8 @@ NA12878,ont,/data/NA12878.sorted.cram,/data/NA12878.sorted.cram.crai,female,2
 - <code>platform</code> is exactly <code>hifi</code> or <code>ont</code>.
 - <code>alignment_index</code> must be the matching BAM/CRAM index.
 - CRAM input must be decodable with the FASTA specified in <code>params.yml</code>.
+- When the manifest includes <code>chrX</code> or <code>chrY</code> and LongTR or STRdust is selected, <code>sex</code> is required and must be <code>male</code>/<code>XY</code> or <code>female</code>/<code>XX</code>. The default GRCh38 policy calls male non-PAR X/Y loci haploid, male PAR loci diploid, female X loci diploid, and female Y loci as no-calls.
+  For another assembly or contig naming scheme, update the <code>sex_chromosome_policy</code> in both caller configuration files to matching PAR intervals before running.
 
 ### Prepare the locus manifest and caller catalogs
 
