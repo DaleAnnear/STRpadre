@@ -8,6 +8,17 @@ threads: 4
 resources: { memory: 8 GB, time: 12h }
 phased_reads_expected: false
 additional_args: []
+sex_chromosome_policy:
+  enabled: true
+  reference_build: GRCh38
+  chromosome_x: chrX
+  chromosome_y: chrY
+  # 0-based, half-open GRCh38 PAR intervals. Male PAR loci remain diploid.
+  pseudoautosomal_regions:
+    - { chromosome: chrX, start: 10000, end: 2781479 }
+    - { chromosome: chrX, start: 155701382, end: 156030895 }
+    - { chromosome: chrY, start: 10000, end: 2781479 }
+    - { chromosome: chrY, start: 56887902, end: 57217415 }
 options:
   minlen: 1
   support: 3
