@@ -29,6 +29,7 @@ OPTION_KEYS = {
     "strdust": {"minlen", "support", "consensus_reads", "max_number_reads", "max_locus", "find_outliers", "phasing", "haploid_chromosomes"},
 }
 SAFE_SAMPLE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+SEX_ALIASES = {"male": "male", "m": "male", "xy": "male", "female": "female", "f": "female", "xx": "female"}
 
 
 class ValidationError(ValueError):
@@ -121,9 +122,9 @@ def read_manifest(path: Path) -> tuple[dict[str, dict[str, str]], str]:
 def valid_additional_args(caller: str, args: list[str]) -> None:
     forbidden = {
         "trgt": {"-g", "--genome", "-r", "--reads", "-b", "--repeats", "-o", "--output-prefix"},
-        "longtr": {"--bams", "--fasta", "--regions", "--tr-vcf"},
+        "longtr": {"--bams", "--fasta", "--regions", "--tr-vcf", "--haploid-chrs"},
         "atarva": {"-f", "--fasta", "-b", "--bam", "-r", "--regions", "-o", "--vcf"},
-        "strdust": {"-r", "--region", "-R", "--region-file", "--pathogenic", "--sample"},
+        "strdust": {"-r", "--region", "-R", "--region-file", "--pathogenic", "--sample", "--haploid"},
     }[caller]
     for token in args:
         if not isinstance(token, str) or not re.fullmatch(r"[^\s;&|`$<>\\]+", token):
@@ -152,8 +153,59 @@ def validate_caller_config(caller: str, config_path: Path, expected_catalog: Pat
         fail(f"{caller}: unknown options are forbidden: {sorted(unknown_options)}")
     if caller == "longtr" and not isinstance(cfg["options"].get("use_lb_tags", False), bool):
         fail("longtr: options.use_lb_tags must be true or false")
+    validate_sex_chromosome_policy(caller, cfg)
     valid_additional_args(caller, cfg["additional_args"])
     return cfg
+
+
+def validate_sex_chromosome_policy(caller: str, config: dict[str, Any]) -> None:
+    policy = config.get("sex_chromosome_policy")
+    if policy is None:
+        return
+    if caller not in {"longtr", "strdust"}:
+        fail(f"{caller}: sex_chromosome_policy is supported only for LongTR and STRdust")
+    if not policy["enabled"]:
+        return
+    chromosome_x, chromosome_y = policy["chromosome_x"], policy["chromosome_y"]
+    if chromosome_x == chromosome_y:
+        fail(f"{caller}: sex_chromosome_policy chromosome_x and chromosome_y must differ")
+    intervals: dict[str, list[tuple[int, int]]] = {}
+    for region in policy["pseudoautosomal_regions"]:
+        contig, start, end = region["chromosome"], region["start"], region["end"]
+        if end <= start:
+            fail(f"{caller}: sex_chromosome_policy has a non-positive PAR interval")
+        intervals.setdefault(contig, []).append((start, end))
+    for contig, values in intervals.items():
+        previous_end = -1
+        for start, end in sorted(values):
+            if start < previous_end:
+                fail(f"{caller}: sex_chromosome_policy has overlapping PAR intervals on {contig}")
+            previous_end = end
+
+
+def validate_sex_aware_samples(samples: list[dict[str, str]], loci: dict[str, dict[str, str]], configs: dict[str, dict[str, Any]], callers: list[str], build: str) -> None:
+    policies = [
+        config["sex_chromosome_policy"]
+        for caller, config in configs.items()
+        if caller in callers and config.get("sex_chromosome_policy", {}).get("enabled", False)
+    ]
+    if not policies:
+        return
+    sex_contigs = {contig for policy in policies for contig in (policy["chromosome_x"], policy["chromosome_y"])}
+    if not any(locus["chr"] in sex_contigs for locus in loci.values()):
+        return
+    for policy in policies:
+        if policy["reference_build"] != build:
+            fail(f"sex_chromosome_policy reference_build ({policy['reference_build']}) differs from manifest ({build})")
+        regions = [(region["chromosome"], region["start"], region["end"]) for region in policy["pseudoautosomal_regions"]]
+        for locus in loci.values():
+            start, end = int(locus["start"]), int(locus["end"])
+            overlaps = [region for region in regions if region[0] == locus["chr"] and start < region[2] and end > region[1]]
+            if overlaps and (len(overlaps) != 1 or start < overlaps[0][1] or end > overlaps[0][2]):
+                fail(f"{locus['locus_id']}: locus crosses a pseudoautosomal boundary; split it before sex-aware calling")
+    for row in samples:
+        if row.get("sex", "").lower() not in SEX_ALIASES:
+            fail(f"{row['sample_id']}: sex must be male/XY or female/XX when the manifest contains sex-chromosome loci")
 
 
 def canonical_motif(motif: str) -> str:
@@ -328,6 +380,7 @@ def main() -> int:
                 if not catalog_index.is_file() or catalog_index.suffix != ".tbi":
                     fail("ATaRVa requires a bgzip-compressed catalog with a staged .tbi index")
             mappings.extend(catalog_records(caller, Path(getattr(args, f"{caller}_catalog")), loci))
+        validate_sex_aware_samples(samples, loci, configs, callers, build)
         consensus = load_yaml(Path(args.consensus_config))
         validate_schema(consensus, "consensus.schema.json", Path(args.consensus_config))
         eligible = {row["sample_id"]: [caller for caller in callers if row["platform"] in PLATFORMS[caller]] for row in samples}
