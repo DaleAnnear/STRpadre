@@ -2,7 +2,7 @@
   <img src="docs/cef4f14c-eb0e-4b92-8a6b-6c4cb90c1caa.png" width="260" alt="STRpadre logo">
 </p>
 
-<h1 align="center">STRpadre</h1>
+<h1 align="center">STRpadre: Short Tandem Repeat Pipeline for Analysis, Detection, Reporting, and Enumeration</h1>
 
 <p align="center">
   A containerised Nextflow workflow for targeted tandem-repeat genotyping from PacBio HiFi and Oxford Nanopore long-read alignments.
