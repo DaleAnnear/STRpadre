@@ -79,14 +79,14 @@ sample sheet + BAM/CRAM + reference + canonical loci
 
 ## Supported genotypers <a name="supported-genotypers"></a>
 
-| Caller | Pinned version | Platforms | Default container | Native catalog | Key requirement |
+| Caller | Pinned version | Platforms | Runtime image | Native catalog | Key requirement |
 |---|---:|---|---|---|---|
 | [TRGT](https://github.com/PacificBiosciences/trgt) | 5.1.0 | HiFi | <code>local/strpadre-trgt:5.1.0</code> | structured BED (<code>ID;MOTIFS;STRUC</code>) | Locally built from a separately authorised PacBio binary |
 | [LongTR](https://github.com/gymrek-lab/LongTR) | 1.2 | HiFi, ONT | <code>daleannear/strpadre:longtr-1.2-r1</code> | 1-based-start BED, motif, optional name | Coordinate-sorted/indexed BAM/CRAM with valid read-group metadata |
 | [ATaRVa](https://github.com/SowpatiLab/ATaRVa) | 0.7.1 | HiFi, ONT | <code>daleannear/strpadre:atarva-0.7.1-r1</code> | sorted bgzip+tabix BED | Coordinate-sorted BAM/CRAM; MD/CS or <code>=/X</code> CIGAR is preferred |
 | [STRdust](https://github.com/wdecoster/STRdust) | 0.20.0 | HiFi, ONT | <code>daleannear/strpadre:strdust-0.20.0-r1</code> | standard BED | BAM/CRAM plus reference; choose the unphased policy explicitly |
-| [Medaka Tandem](https://github.com/nanoporetech/medaka/tree/v2.2.2/medaka/tandem) | 2.2.2 | ONT | `local/strpadre-medaka:2.2.2` | three-column BED | Indexed BAM/CRAM, sample sex and a matching ONT consensus model |
-| [STRkit](https://github.com/davidlougheed/strkit) | 0.25.0 | HiFi, ONT | <code>local/strpadre-strkit:0.25.0</code> | BED with locus ID and motif | Build the local image before selecting this caller |
+| [Medaka Tandem](https://github.com/nanoporetech/medaka/tree/v2.2.2/medaka/tandem) | 2.2.2 | ONT | `daleannear/strpadre:medaka-2.2.2-r1` | three-column BED | Indexed BAM/CRAM, sample sex and a matching ONT consensus model |
+| [STRkit](https://github.com/davidlougheed/strkit) | 0.25.0 | HiFi, ONT | `daleannear/strpadre:strkit-0.25.0-r1` | BED with locus ID and motif | Indexed BAM/CRAM and matching reference |
 
 The caller configuration files in [configs/](configs) define the image, catalog,
 platform support, resource request, and safe caller options. Exact source revisions
@@ -125,32 +125,36 @@ cd STRpadre
 
 ### 2. Obtain the standard runtime images
 
-LongTR, ATaRVa, STRdust, and the normaliser/consensus image are published on
-[Docker Hub](https://hub.docker.com/r/daleannear/strpadre). Docker pulls them
-automatically on the first run, or you can fetch them ahead of time:
+Docker Hub hosts the images for LongTR, ATaRVa, STRdust, STRkit, Medaka Tandem, and the
+normaliser/consensus step. The published STRkit and Medaka Tandem tags target
+`linux/amd64`. [Docker Hub tags](https://hub.docker.com/r/daleannear/strpadre/tags)
+
+The checked-in Nextflow defaults use local image names for STRkit and Medaka Tandem.
+To run the published images, add these top-level settings to your `params.yml`:
+
+~~~yaml
+strkit_container: daleannear/strpadre:strkit-0.25.0-r1
+medaka_container: daleannear/strpadre:medaka-2.2.2-r1
+~~~
+
+For matching provenance in `command.json`, set `container` in `configs/strkit.yml`
+and `configs/medaka.yml` to the corresponding tag above. With `-profile docker`,
+Docker pulls each selected image on first use. To fetch them ahead of time:
 
 ~~~bash
 docker pull daleannear/strpadre:normalizer-1.0.0-r1
 docker pull daleannear/strpadre:longtr-1.2-r1
 docker pull daleannear/strpadre:atarva-0.7.1-r1
 docker pull daleannear/strpadre:strdust-0.20.0-r1
-~~~
-
-These are the default runtime images in <code>nextflow.config</code>. The caller YAML files retain image metadata for validation and provenance; use the matching <code>*_container</code> parameter to override a runtime image.
-
-To include STRkit, build its image once on the Docker host and add `strkit` to your caller list.
-
-~~~bash
-bash containers/build.sh strkit
-nextflow run main.nf -profile docker -params-file params.yml --callers longtr,strkit
+docker pull daleannear/strpadre:strkit-0.25.0-r1
+docker pull daleannear/strpadre:medaka-2.2.2-r1
 ~~~
 
 STRkit uses the manifest boundaries and each allele's VCF anchor length to report repeat-only lengths. With `ploidy=1` it calls all contigs as haploid. Otherwise it uses the STRkit XX or XY preset for recognized sample sex and the autosomal preset when sex is unspecified. The XY preset treats X and Y as haploid across their full lengths, including PARs.
 
-For a mixed cohort, select `medaka` and `trgt` alongside the four shared callers. Each sample then has five eligible callers. Build the local caller images before running (see the TRGT build instructions below).
+For a mixed cohort, select `medaka` and `trgt` alongside the four shared callers. Each sample then has five eligible callers. Build the TRGT image as described in step 3 before running this command.
 
 ~~~bash
-bash containers/build.sh medaka strkit
 nextflow run main.nf -profile docker -params-file params.yml \
   --callers trgt,longtr,atarva,strdust,strkit,medaka
 ~~~
@@ -187,11 +191,8 @@ exact required path and build:
 mkdir -p containers/vendor
 install -m 0555 /path/to/authorised/trgt-5.1.0 containers/vendor/trgt-5.1.0
 
-# Builds the local TRGT image and refreshes the other local build images.
-bash containers/build.sh
-
-# Confirms that every locally built image starts and reports a version.
-bash containers/smoke_test.sh
+bash containers/build.sh trgt
+docker run --rm local/strpadre-trgt:5.1.0 trgt --version
 ~~~
 
 [containers/Dockerfile.trgt](containers/Dockerfile.trgt) copies this file into the
