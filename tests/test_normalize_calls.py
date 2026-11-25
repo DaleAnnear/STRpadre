@@ -13,7 +13,7 @@ ROOT = Path(__file__).parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 
 
-@pytest.mark.parametrize("caller", ["trgt", "longtr", "atarva", "strdust"])
+@pytest.mark.parametrize("caller", ["trgt", "longtr", "atarva", "strdust", "strkit"])
 def test_each_documented_parser_emits_common_schema(tmp_path: Path, caller: str) -> None:
     output = tmp_path / "calls.tsv.gz"
     versions = tmp_path / "versions.yml"
@@ -27,6 +27,11 @@ def test_each_documented_parser_emits_common_schema(tmp_path: Path, caller: str)
     assert row["call_status"] == "valid_call"
     assert row["allele1_length_bp"] == "30"
     assert row["allele2_length_bp"] == "33"
+    if caller == "strkit":
+        assert (row["allele1_sequence"], row["allele2_sequence"]) == ("CAG" * 10, "CAG" * 11)
+        assert (row["allele1_copy_number"], row["allele2_copy_number"]) == ("10", "11")
+        assert (row["read_support_allele1"], row["read_support_allele2"]) == ("7", "8")
+        assert row["phase_set"] == "42"
     assert row["parser_schema_version"] == "1.0.0"
 
 

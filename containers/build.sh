@@ -14,7 +14,7 @@ With no IMAGE arguments, all images are selected. By default, published images
 are pulled from Docker Hub and built locally only when the pull fails. --local
 forces local builds for the selected images.
 
-Images: normalizer, longtr, atarva, strdust, trgt, all
+Images: normalizer, longtr, atarva, strdust, strkit, trgt, all
 EOF
 }
 
@@ -44,9 +44,10 @@ while (( $# )); do
       add_image longtr
       add_image atarva
       add_image strdust
+      add_image strkit
       add_image trgt
       ;;
-    normalizer|longtr|atarva|strdust|trgt)
+    normalizer|longtr|atarva|strdust|strkit|trgt)
       add_image "$1"
       ;;
     *)
@@ -59,7 +60,7 @@ while (( $# )); do
 done
 
 if (( ${#selected[@]} == 0 )); then
-  selected=(normalizer longtr atarva strdust trgt)
+  selected=(normalizer longtr atarva strdust strkit trgt)
 fi
 
 normalizer_local=local/strpadre-normalizer:1.0.0
@@ -112,6 +113,9 @@ for image in "${selected[@]}"; do
       ;;
     strdust)
       pull_or_build local/strpadre-strdust:0.20.0 daleannear/strpadre:strdust-0.20.0-r1 containers/Dockerfile.strdust true
+      ;;
+    strkit)
+      docker build --file containers/Dockerfile.strkit --tag local/strpadre-strkit:0.25.0 .
       ;;
     trgt)
       if [[ -f containers/vendor/trgt-5.1.0 ]]; then

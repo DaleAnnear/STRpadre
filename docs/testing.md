@@ -27,6 +27,13 @@ real normalizer plus consensus test over public synthetic VCF fixtures:
 bash tests/test_docker_integration.sh
 ```
 
+To verify STRkit genotyping on both synthetic BAM and CRAM reads, run:
+
+```bash
+bash containers/build.sh strkit
+bash tests/test_strkit_docker.sh
+```
+
 Caller executable smoke tests require images built under their license conditions:
 
 ```bash

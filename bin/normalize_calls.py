@@ -118,6 +118,13 @@ def native_coordinates(caller: str, record: VcfRecord) -> tuple[int, int, str | 
         return int(info_text(record, "START")) - 1, int(info_text(record, "END")), None if record.record_id == MISSING else record.record_id, info_text(record, "MOTIF").split(",")[0]
     if caller == "atarva":
         return int(info_text(record, "START")), int(info_text(record, "END")), info_text(record, "ID"), info_text(record, "MOTIF")
+    if caller == "strkit":
+        return (
+            int(info_text(record, "BED_START")),
+            int(info_text(record, "BED_END")),
+            record.record_id,
+            info_text(record, "MOTIF"),
+        )
     if caller == "strdust":
         return record.pos - 1, int(info_text(record, "END")), None, None
     raise ParserError(f"Unknown caller {caller}")
@@ -194,6 +201,30 @@ def sequences(record: VcfRecord, caller: str) -> tuple[str, str]:
     return pair(output)
 
 
+def strkit_sequences(record: VcfRecord) -> tuple[tuple[str, str], tuple[str, str]]:
+    """ANCL is indexed by REF/ALT, whereas MC and AD are in call order."""
+    alleles = [record.ref, *record.alt]
+    anchors = values(record.format.get("ANCL", MISSING))
+    seqs, lengths = [], []
+    for gt in genotype_indices(record):
+        if gt == MISSING:
+            seqs.append(MISSING)
+            lengths.append(MISSING)
+            continue
+        try:
+            index = int(gt)
+            allele = alleles[index]
+            anchor = int(anchors[index])
+        except (ValueError, IndexError) as exc:
+            raise ParserError(f"Invalid STRkit GT/ANCL at {record.chrom}:{record.pos}") from exc
+        if index < 0 or anchor < 0 or anchor > len(allele):
+            raise ParserError(f"Invalid STRkit allele anchor at {record.chrom}:{record.pos}")
+        repeat = "" if allele == "*" else allele[anchor:]
+        seqs.append(repeat or MISSING)
+        lengths.append(str(len(repeat)))
+    return pair(seqs), pair(lengths)
+
+
 def copy_numbers_from_length(lengths: tuple[str, str], motif: str) -> tuple[str, str]:
     answer = []
     for length in lengths:
@@ -216,7 +247,10 @@ def parse_record(caller: str, record: VcfRecord, locus: dict[str, str], sample_i
     if any(item == MISSING for item in genotype_indices(record)):
         status = "filtered_call" if filtered else "valid_no_call"
     motif = locus["primary_motif"]
-    sequence1, sequence2 = sequences(record, caller)
+    if caller == "strkit":
+        (sequence1, sequence2), lengths = strkit_sequences(record)
+    else:
+        sequence1, sequence2 = sequences(record, caller)
     quality = MISSING
     phase_set = record.format.get("PS", MISSING)
     haplotypes = "phased" if "|" in gt else "unphased"
@@ -241,6 +275,9 @@ def parse_record(caller: str, record: VcfRecord, locus: dict[str, str], sample_i
         lengths = pair(number_values(record.format.get("AL", MISSING)))
         copies = pair(number_values(record.format.get("CN", MISSING)))
         supports = pair(number_values(record.format.get("SD", MISSING)))
+    elif caller == "strkit":
+        copies = pair(number_values(record.format.get("MC", MISSING)))
+        supports = pair(number_values(record.format.get("AD", MISSING)))
     else:
         lengths = pair(number_values(record.format.get("FRB", MISSING)))
         copies = copy_numbers_from_length(lengths, motif)
@@ -260,7 +297,9 @@ def parse_record(caller: str, record: VcfRecord, locus: dict[str, str], sample_i
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--caller", choices=["trgt", "longtr", "atarva", "strdust"], required=True)
+    parser.add_argument(
+        "--caller", choices=["trgt", "longtr", "atarva", "strdust", "strkit"], required=True
+    )
     parser.add_argument("--sample-id", required=True)
     parser.add_argument("--platform", choices=["hifi", "ont"], required=True)
     parser.add_argument("--vcf", type=Path, required=True)
@@ -275,7 +314,20 @@ def main() -> int:
     args = parse_args()
     try:
         loci, _ = load_manifest(args.locus_manifest)
-        parsed = [parse_record(args.caller, record, map_locus(args.caller, record, loci), args.sample_id, args.platform, args.source_vcf) for record in iter_vcf(args.vcf, args.sample_id)]
+        records = iter_vcf(args.vcf, args.sample_id)
+        if args.caller == "strkit":
+            records = (record for record in records if info_text(record, "VT") != "snv")
+        parsed = [
+            parse_record(
+                args.caller,
+                record,
+                map_locus(args.caller, record, loci),
+                args.sample_id,
+                args.platform,
+                args.source_vcf,
+            )
+            for record in records
+        ]
         if len({row["canonical_locus_id"] for row in parsed}) != len(parsed):
             raise ParserError("More than one native VCF record mapped to a canonical locus")
         with gzip.open(args.output, "wt", newline="") as handle:

@@ -1,0 +1,12 @@
+FROM python:3.12.11-slim-bookworm
+
+LABEL org.opencontainers.image.source="https://github.com/davidlougheed/strkit" \
+      org.opencontainers.image.version="0.25.0"
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends bcftools tabix procps \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --no-cache-dir strkit==0.25.0 PyYAML==6.0.2 \
+    && strkit --version
+
+USER nobody

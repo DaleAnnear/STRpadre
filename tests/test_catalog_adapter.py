@@ -71,6 +71,9 @@ def test_adapter_emits_all_native_catalogs_and_provenance(tmp_path: Path, monkey
         "chr2\t5\t10\tGAA\tLONG_B",
     ]
     assert (output / "strdust.bed").read_text().splitlines() == ["chr1\t10\t16", "chr2\t4\t10"]
+    assert (output / "strkit.bed").read_text().splitlines() == [
+        "chr1\t10\t16\tID=LOC_A;MOTIF=CAG", "chr2\t4\t10\tID=LOC_B;MOTIF=GAA",
+    ]
     with gzip.open(output / "atarva.bed.gz", "rt") as handle:
         assert handle.read().splitlines() == [
             "#CHROM\tSTART\tEND\tMOTIF\tMOTIF_LEN",
@@ -80,8 +83,8 @@ def test_adapter_emits_all_native_catalogs_and_provenance(tmp_path: Path, monkey
     assert (output / "atarva.bed.gz.tbi").is_file()
     with (output / "catalog_locus_mapping.tsv").open(newline="") as handle:
         mappings = list(csv.DictReader(handle, delimiter="\t"))
-    assert len(mappings) == 8
-    assert {row["caller"] for row in mappings} == {"trgt", "longtr", "atarva", "strdust"}
+    assert len(mappings) == 10
+    assert {row["caller"] for row in mappings} == {"trgt", "longtr", "atarva", "strdust", "strkit"}
     assert {row["catalog_coordinate_system"] for row in mappings if row["caller"] == "longtr"} == {
         "1-based-closed"
     }

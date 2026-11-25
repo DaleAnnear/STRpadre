@@ -19,5 +19,6 @@ Native formats are intentionally not interchangeable:
 - LongTR accepts a BED-like file whose start is documented as 1-based and whose fourth
   column is motif; its optional fifth column becomes the VCF ID.
 - ATaRVa needs sorted, bgzip-compressed, tabix-indexed BED with motif and motif length.
+- STRkit uses zero-based half-open BED with `ID` and `MOTIF` in the fourth column. The ID defaults to `locus_id` and can be set with `strkit_id`.
 - STRdust consumes a standard BED (zero-based half-open coordinates).
 

@@ -12,8 +12,20 @@ import validate_inputs
 
 
 def caller_config(caller: str, build: str = "test-build") -> dict:
-    versions = {"trgt": "5.1.0", "longtr": "1.2", "atarva": "0.7.1", "strdust": "0.20.0"}
-    platforms = {"trgt": ["hifi"], "longtr": ["hifi", "ont"], "atarva": ["hifi", "ont"], "strdust": ["hifi", "ont"]}
+    versions = {
+        "trgt": "5.1.0",
+        "longtr": "1.2",
+        "atarva": "0.7.1",
+        "strdust": "0.20.0",
+        "strkit": "0.25.0",
+    }
+    platforms = {
+        "trgt": ["hifi"],
+        "longtr": ["hifi", "ont"],
+        "atarva": ["hifi", "ont"],
+        "strdust": ["hifi", "ont"],
+        "strkit": ["hifi", "ont"],
+    }
     return {"schema_version": "1.0", "caller": caller, "container": f"local/{caller}:{versions[caller]}", "tool_version": versions[caller], "reference_build": build, "platforms": platforms[caller], "native_catalog": "ignored", "threads": 1 if caller == "longtr" else 2, "resources": {"memory": "4 GB", "time": "1h"}, "phased_reads_expected": False, "additional_args": [], "options": {}}
 
 
@@ -33,7 +45,12 @@ def test_preflight_restricts_trgt_to_hifi(tmp_path: Path, monkeypatch) -> None:
     samples = tmp_path / "samples.csv"
     samples.write_text("sample_id,platform,alignment,alignment_index\nS_HIFI,hifi," + str(bam) + "," + str(bai) + "\nS_ONT,ont," + str(cram) + "," + str(crai) + "\n")
     catalogs = {}
-    for caller, content in {"trgt": "chr1\t100\t130\tID=L1;MOTIFS=CAG;STRUC=<TR>\n", "longtr": "chr1\t101\t130\tCAG\tL1\n", "strdust": "chr1\t100\t130\n"}.items():
+    for caller, content in {
+        "trgt": "chr1\t100\t130\tID=L1;MOTIFS=CAG;STRUC=<TR>\n",
+        "longtr": "chr1\t101\t130\tCAG\tL1\n",
+        "strdust": "chr1\t100\t130\n",
+        "strkit": "chr1\t100\t130\tID=L1;MOTIF=CAG\n",
+    }.items():
         catalogs[caller] = tmp_path / f"{caller}.bed"; catalogs[caller].write_text(content)
     atarva_plain = tmp_path / "atarva.bed"
     atarva_plain.write_text("chr1\t100\t130\tCAG\t3\n")
@@ -41,19 +58,41 @@ def test_preflight_restricts_trgt_to_hifi(tmp_path: Path, monkeypatch) -> None:
     with gzip.open(atarva, chr(119) + chr(116)) as handle: handle.write(atarva_plain.read_text()); Path(str(atarva) + chr(46) + chr(116) + chr(98) + chr(105)).touch()
     catalogs["atarva"] = atarva
     configs = {}
-    for caller in ("trgt", "longtr", "atarva", "strdust"):
+    for caller in ("trgt", "longtr", "atarva", "strdust", "strkit"):
         configs[caller] = tmp_path / f"{caller}.yml"; configs[caller].write_text(yaml.safe_dump(caller_config(caller)))
     consensus = tmp_path / "consensus.yml"
     consensus.write_text((Path(__file__).parents[1] / "configs" / "consensus.yml").read_text())
     out = tmp_path / "out"
-    args = ["--samplesheet", str(samples), "--reference", str(reference), "--reference-fai", str(reference) + ".fai", "--locus-manifest", str(manifest), "--callers", "trgt,longtr,atarva,strdust", "--consensus-config", str(consensus), "--output-dir", str(out), "--skip-alignment-header-check"]
-    for caller in ("trgt", "longtr", "atarva", "strdust"):
+    args = [
+        "--samplesheet",
+        str(samples),
+        "--reference",
+        str(reference),
+        "--reference-fai",
+        str(reference) + ".fai",
+        "--locus-manifest",
+        str(manifest),
+        "--callers",
+        "trgt,longtr,atarva,strdust,strkit",
+        "--consensus-config",
+        str(consensus),
+        "--output-dir",
+        str(out),
+        "--skip-alignment-header-check",
+    ]
+    for caller in ("trgt", "longtr", "atarva", "strdust", "strkit"):
         args += [f"--{caller}-config", str(configs[caller]), f"--{caller}-catalog", str(catalogs[caller])]
     args += ["--atarva-catalog-index", str(atarva) + ".tbi"]
     assert invoke(monkeypatch, args) == 0
     report = json.loads((out / "preflight_report.json").read_text())
-    assert report["samples"][0]["eligible_callers"] == ["trgt", "longtr", "atarva", "strdust"]
-    assert report["samples"][1]["eligible_callers"] == ["longtr", "atarva", "strdust"]
+    assert report["samples"][0]["eligible_callers"] == [
+        "trgt",
+        "longtr",
+        "atarva",
+        "strdust",
+        "strkit",
+    ]
+    assert report["samples"][1]["eligible_callers"] == ["longtr", "atarva", "strdust", "strkit"]
 
 
 def test_bad_caller_name_is_rejected() -> None:

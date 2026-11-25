@@ -15,7 +15,13 @@ from typing import Any
 
 import yaml
 
-PLATFORMS = {"trgt": {"hifi"}, "longtr": {"hifi", "ont"}, "atarva": {"hifi", "ont"}, "strdust": {"hifi", "ont"}}
+PLATFORMS = {
+    "trgt": {"hifi"},
+    "longtr": {"hifi", "ont"},
+    "atarva": {"hifi", "ont"},
+    "strdust": {"hifi", "ont"},
+    "strkit": {"hifi", "ont"},
+}
 
 
 class CallerError(RuntimeError):
@@ -247,6 +253,19 @@ def build_command(caller: str, config: dict[str, Any], ns: argparse.Namespace, o
                 command.append(flag)
         command.extend(extra)
         return command, raw_vcf, False
+    if caller == "strkit":
+        raw_vcf = outdir / f"{output_stem}.original.vcf"
+        ploidy = "haploid" if ns.ploidy == "1" else karyotype(ns.sex, "diploid_autosomes")
+        command = [
+            "strkit", "call", str(ns.alignment), "--ref", str(ns.reference),
+            "--loci", str(ns.catalog), "--vcf", str(raw_vcf), "--respect-ref",
+            "--sample-id", ns.sample_id, "--processes", str(config["threads"]), "--ploidy", ploidy,
+        ]
+        append_if(command, "--seed", option(config, "seed"))
+        if config.get("phased_reads_expected"):
+            command.append("--use-hp")
+        command.extend(extra)
+        return command, raw_vcf, False
     if caller == "strdust":
         raw_vcf = outdir / f"{output_stem}.original.vcf"
         command = ["STRdust", "--region-file", str(ns.catalog), "--sample", ns.sample_id, "--threads", str(config["threads"])]
@@ -267,7 +286,13 @@ def build_command(caller: str, config: dict[str, Any], ns: argparse.Namespace, o
 
 
 def version_probe(caller: str) -> tuple[str, str]:
-    probes = {"trgt": ["trgt", "--version"], "longtr": ["LongTR", "--help"], "atarva": ["atarva", "--version"], "strdust": ["STRdust", "--version"]}
+    probes = {
+        "trgt": ["trgt", "--version"],
+        "longtr": ["LongTR", "--help"],
+        "atarva": ["atarva", "--version"],
+        "strdust": ["STRdust", "--version"],
+        "strkit": ["strkit", "--version"],
+    }
     output = command_output(probes[caller])
     return " ".join(probes[caller]), output
 

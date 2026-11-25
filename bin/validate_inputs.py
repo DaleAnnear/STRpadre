@@ -20,12 +20,19 @@ try:
 except ImportError:  # Unit tests may exercise the schema layer without pysam.
     pysam = None
 
-CALLERS = ("trgt", "longtr", "atarva", "strdust")
-PLATFORMS = {"trgt": {"hifi"}, "longtr": {"hifi", "ont"}, "atarva": {"hifi", "ont"}, "strdust": {"hifi", "ont"}}
+CALLERS = ("trgt", "longtr", "atarva", "strdust", "strkit")
+PLATFORMS = {
+    "trgt": {"hifi"},
+    "longtr": {"hifi", "ont"},
+    "atarva": {"hifi", "ont"},
+    "strdust": {"hifi", "ont"},
+    "strkit": {"hifi", "ont"},
+}
 OPTION_KEYS = {
     "trgt": {"preset", "genotyper", "flank_len", "output_flank_len", "max_depth", "disable_bam_output", "karyotype_default"},
     "longtr": {"min_mapq", "min_mean_qual", "max_tr_len", "min_reads", "indel_flank_len", "phased_bam", "output_filters", "haploid_chromosomes", "use_lb_tags"},
     "atarva": {"map_qual", "min_reads", "max_reads", "snp_dist", "snp_count", "snp_qual", "flank", "haplotag", "decompose", "loci_wise", "amplicon", "somatic", "karyotype_default"},
+    "strkit": {"seed"},
     "strdust": {"minlen", "support", "consensus_reads", "max_number_reads", "max_locus", "find_outliers", "phasing", "haploid_chromosomes"},
 }
 SAFE_SAMPLE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -124,7 +131,29 @@ def valid_additional_args(caller: str, args: list[str]) -> None:
         "trgt": {"-g", "--genome", "-r", "--reads", "-b", "--repeats", "-o", "--output-prefix"},
         "longtr": {"--bams", "--fasta", "--regions", "--tr-vcf", "--haploid-chrs"},
         "atarva": {"-f", "--fasta", "-b", "--bam", "-r", "--regions", "-o", "--vcf"},
-        "strdust": {"-r", "--region", "-R", "--region-file", "--pathogenic", "--sample", "--haploid"},
+        "strkit": {
+            "--ref",
+            "-r",
+            "--loci",
+            "-l",
+            "--vcf",
+            "--sample-id",
+            "-s",
+            "--processes",
+            "-p",
+            "--ploidy",
+            "--sex-chr",
+            "-x",
+        },
+        "strdust": {
+            "-r",
+            "--region",
+            "-R",
+            "--region-file",
+            "--pathogenic",
+            "--sample",
+            "--haploid",
+        },
     }[caller]
     for token in args:
         if not isinstance(token, str) or not re.fullmatch(r"[^\s;&|`$<>\\]+", token):
@@ -251,6 +280,14 @@ def catalog_records(caller: str, path: Path, loci: dict[str, dict[str, str]]) ->
             if not {"ID", "MOTIFS", "STRUC"}.issubset(metadata):
                 fail("TRGT catalog fourth column requires ID, MOTIFS, and STRUC")
             contig, start, end, native_id, motif = fields[0], int(fields[1]), int(fields[2]), metadata["ID"], metadata["MOTIFS"].split(",")[0]
+        elif caller == "strkit":
+            if len(fields) != 4:
+                fail("STRkit catalog requires four BED columns")
+            metadata = dict(item.split("=", 1) for item in fields[3].split(";") if "=" in item)
+            if not metadata.get("ID") or not metadata.get("MOTIF"):
+                fail("STRkit catalog requires ID and MOTIF in the fourth column")
+            contig, start, end = fields[0], int(fields[1]), int(fields[2])
+            native_id, motif = metadata["ID"], metadata["MOTIF"]
         elif caller == "longtr":
             if len(fields) < 4:
                 fail("LongTR catalog requires at least four columns")
@@ -349,6 +386,8 @@ def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ("samplesheet", "reference", "reference-fai", "locus-manifest", "trgt-config", "trgt-catalog", "longtr-config", "longtr-catalog", "atarva-config", "atarva-catalog", "atarva-catalog-index", "strdust-config", "strdust-catalog", "consensus-config"):
         parser.add_argument(f"--{key}", required=True)
+    parser.add_argument("--strkit-config")
+    parser.add_argument("--strkit-catalog")
     parser.add_argument("--callers", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--staged-alignment-dir", type=Path)
@@ -373,6 +412,10 @@ def main() -> int:
         configs = {}
         mappings: list[dict[str, str]] = []
         for caller in CALLERS:
+            if caller == "strkit" and not (args.strkit_config and args.strkit_catalog):
+                if caller in callers or args.strkit_config or args.strkit_catalog:
+                    fail("STRkit requires --strkit-config and --strkit-catalog")
+                continue
             config = validate_caller_config(caller, Path(getattr(args, f"{caller}_config")), Path(getattr(args, f"{caller}_catalog")))
             configs[caller] = config
             if caller == "atarva":

@@ -17,7 +17,13 @@ from typing import Any, Iterable
 import yaml
 
 MISSING = "."
-PLATFORMS = {"trgt": {"hifi"}, "longtr": {"hifi", "ont"}, "atarva": {"hifi", "ont"}, "strdust": {"hifi", "ont"}}
+PLATFORMS = {
+    "trgt": {"hifi"},
+    "longtr": {"hifi", "ont"},
+    "atarva": {"hifi", "ont"},
+    "strdust": {"hifi", "ont"},
+    "strkit": {"hifi", "ont"},
+}
 REQUIRED_NORMALIZED = {"sample_id", "platform", "canonical_locus_id", "chr", "canonical_start", "canonical_end", "reference_build", "motif", "caller", "call_status", "allele1_length_bp", "allele2_length_bp", "allele1_copy_number", "allele2_copy_number", "read_support_allele1", "read_support_allele2", "source_vcf"}
 
 

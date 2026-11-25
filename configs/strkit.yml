@@ -1,0 +1,11 @@
+schema_version: "1.0"
+caller: strkit
+container: local/strpadre-strkit:0.25.0
+tool_version: "0.25.0"
+platforms: [hifi, ont]
+threads: 4
+resources: { memory: 8 GB, time: 24h }
+phased_reads_expected: false
+additional_args: []
+options:
+  seed: 183

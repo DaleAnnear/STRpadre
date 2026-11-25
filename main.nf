@@ -7,10 +7,12 @@ include { TRGT } from './modules/local/trgt'
 include { LONGTR } from './modules/local/longtr'
 include { ATARVA } from './modules/local/atarva'
 include { STRDUST } from './modules/local/strdust'
+include { STRKIT } from './modules/local/strkit'
 include { NORMALIZE_TRGT } from './modules/local/normalize_trgt'
 include { NORMALIZE_LONGTR } from './modules/local/normalize_longtr'
 include { NORMALIZE_ATARVA } from './modules/local/normalize_atarva'
 include { NORMALIZE_STRDUST } from './modules/local/normalize_strdust'
+include { NORMALIZE_STRKIT } from './modules/local/normalize_strkit'
 include { CONSENSUS } from './modules/local/consensus'
 
 
@@ -22,9 +24,9 @@ def normalizeCallers(value) {
     if (!names) {
         error '--callers must not be empty'
     }
-    def unknown = names.findAll { !(it ==~ /trgt|longtr|atarva|strdust/) }
+    def unknown = names.findAll { !(it ==~ /trgt|longtr|atarva|strdust|strkit/) }
     if (unknown) {
-        error(/Unknown caller name; allowed: trgt,longtr,atarva,strdust/)
+        error(/Unknown caller name; allowed: trgt,longtr,atarva,strdust,strkit/)
     }
     if (names.size() != names.toSet().size()) {
         error "Duplicate caller name(s) are not allowed: ${names.join(',')}"
@@ -45,24 +47,26 @@ workflow {
     longtrConfig = file(params.longtr_config, checkIfExists: true)
     atarvaConfig = file(params.atarva_config, checkIfExists: true)
     strdustConfig = file(params.strdust_config, checkIfExists: true)
+    strkitConfig = file(params.strkit_config, checkIfExists: true)
     consensusConfig = file(params.consensus_config, checkIfExists: true)
-    CATALOG_ADAPTER(Channel.of(tuple(manifest, referenceFai, 'trgt,longtr,atarva,strdust')))
+    CATALOG_ADAPTER(Channel.of(tuple(manifest, referenceFai, 'trgt,longtr,atarva,strdust,strkit')))
     catalogAssets = CATALOG_ADAPTER.out.catalogs.map { catalogDir ->
         tuple(
             catalogDir.resolve('trgt.bed'),
             catalogDir.resolve('longtr.bed'),
             catalogDir.resolve('atarva.bed.gz'),
             catalogDir.resolve('atarva.bed.gz.tbi'),
-            catalogDir.resolve('strdust.bed')
+            catalogDir.resolve('strdust.bed'),
+            catalogDir.resolve('strkit.bed')
         )
     }
 
-    validationInput = catalogAssets.map { trgtCatalog, longtrCatalog, atarvaCatalog, atarvaCatalogIndex, strdustCatalog ->
+    validationInput = catalogAssets.map { trgtCatalog, longtrCatalog, atarvaCatalog, atarvaCatalogIndex, strdustCatalog, strkitCatalog ->
         tuple(
             sampleSheet, reference, referenceFai, manifest,
             trgtConfig, trgtCatalog, longtrConfig, longtrCatalog,
             atarvaConfig, atarvaCatalog, atarvaCatalogIndex,
-            strdustConfig, strdustCatalog, consensusConfig, callers.join(',')
+            strdustConfig, strdustCatalog, strkitConfig, strkitCatalog, consensusConfig, callers.join(',')
         )
     }
     alignmentAssets = Channel.fromPath(params.samplesheet, checkIfExists: true)
@@ -77,6 +81,7 @@ workflow {
     atarvaCatalog = catalogAssets.map { it[2] }
     atarvaCatalogIndex = catalogAssets.map { it[3] }
     strdustCatalog = catalogAssets.map { it[4] }
+    strkitCatalog = catalogAssets.map { it[5] }
 
     samples = Channel.fromPath(params.samplesheet, checkIfExists: true)
         .splitCsv(header: true)
@@ -109,16 +114,23 @@ workflow {
         .map { sampleId, platform, alignment, alignmentIndex, sex, ploidy, gate, catalog ->
             tuple(sampleId, platform, alignment, alignmentIndex, sex, ploidy, reference, referenceFai, catalog, strdustConfig, gate)
         })
+    STRKIT(samples.filter { it[1] in ['hifi', 'ont'] && callers.contains('strkit') }
+        .combine(validationGate).combine(strkitCatalog)
+        .map { sampleId, platform, alignment, alignmentIndex, sex, ploidy, gate, catalog ->
+            tuple(sampleId, platform, alignment, alignmentIndex, sex, ploidy, reference, referenceFai, catalog, strkitConfig, gate)
+        })
 
     NORMALIZE_TRGT(TRGT.out.calls.map { s, p, native_dir -> tuple(s, p, native_dir, manifest) })
     NORMALIZE_LONGTR(LONGTR.out.calls.map { s, p, native_dir -> tuple(s, p, native_dir, manifest) })
     NORMALIZE_ATARVA(ATARVA.out.calls.map { s, p, native_dir -> tuple(s, p, native_dir, manifest) })
     NORMALIZE_STRDUST(STRDUST.out.calls.map { s, p, native_dir -> tuple(s, p, native_dir, manifest) })
+    NORMALIZE_STRKIT(STRKIT.out.calls.map { s, p, native_dir -> tuple(s, p, native_dir, manifest) })
 
     normalized = NORMALIZE_TRGT.out.calls
         .mix(NORMALIZE_LONGTR.out.calls)
         .mix(NORMALIZE_ATARVA.out.calls)
         .mix(NORMALIZE_STRDUST.out.calls)
+        .mix(NORMALIZE_STRKIT.out.calls)
     consensusAssets = Channel.of(tuple(manifest, sampleSheet, consensusConfig, callers.join(',')))
     CONSENSUS(normalized.map { sample_id, platform, normalized_file -> normalized_file }.collect(), consensusAssets)
 }

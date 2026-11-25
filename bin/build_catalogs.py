@@ -27,7 +27,9 @@ def load(path: Path) -> list[dict[str, str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--caller", choices=["longtr", "atarva", "strdust", "trgt"], required=True)
+    parser.add_argument(
+        "--caller", choices=["longtr", "atarva", "strdust", "strkit", "trgt"], required=True
+    )
     parser.add_argument("--locus-manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--allow-simple-trgt", action="store_true", help="Allow TRGT conversion only for loci without repeat_structure")
@@ -45,6 +47,8 @@ def main() -> int:
                     handle.write(f"{row['chr']}\t{start + 1}\t{end}\t{motif}\t{native_id}\n")
                 elif args.caller == "atarva":
                     handle.write(f"{row['chr']}\t{start}\t{end}\t{motif}\t{len(motif)}\n")
+                elif args.caller == "strkit":
+                    handle.write(f"{row['chr']}\t{start}\t{end}\tID={native_id};MOTIF={motif}\n")
                 elif args.caller == "strdust":
                     handle.write(f"{row['chr']}\t{start}\t{end}\n")
                 else:

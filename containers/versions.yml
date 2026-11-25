@@ -44,6 +44,12 @@ tools:
     source_revision: c79c674117181e8c7cc9d31c5755dcd884a222e8
     license: MIT
     container: local/strpadre-strdust:0.20.0
+  strkit:
+    version: "0.25.0"
+    source_url: https://github.com/davidlougheed/strkit
+    source_revision: v0.25.0
+    license: GPL-3.0-only
+    container: local/strpadre-strkit:0.25.0
   normalizer_consensus:
     version: "1.0.0"
     source_url: local://bin

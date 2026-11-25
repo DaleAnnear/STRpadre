@@ -65,7 +65,7 @@ sample sheet + BAM/CRAM + reference + canonical loci
                          |
    +---------------------+---------------------+---------------------+
    |                     |                     |                     |
- TRGT                  LongTR                ATaRVa               STRdust
+ TRGT                  LongTR                ATaRVa          STRdust / STRkit
  (HiFi)              (HiFi/ONT)            (HiFi/ONT)           (HiFi/ONT)
    |                     |                     |                     |
    +---- native VCFs, logs, and tool versions are retained ----------+
@@ -85,6 +85,7 @@ sample sheet + BAM/CRAM + reference + canonical loci
 | [LongTR](https://github.com/gymrek-lab/LongTR) | 1.2 | HiFi, ONT | <code>daleannear/strpadre:longtr-1.2-r1</code> | 1-based-start BED, motif, optional name | Coordinate-sorted/indexed BAM/CRAM with valid read-group metadata |
 | [ATaRVa](https://github.com/SowpatiLab/ATaRVa) | 0.7.1 | HiFi, ONT | <code>daleannear/strpadre:atarva-0.7.1-r1</code> | sorted bgzip+tabix BED | Coordinate-sorted BAM/CRAM; MD/CS or <code>=/X</code> CIGAR is preferred |
 | [STRdust](https://github.com/wdecoster/STRdust) | 0.20.0 | HiFi, ONT | <code>daleannear/strpadre:strdust-0.20.0-r1</code> | standard BED | BAM/CRAM plus reference; choose the unphased policy explicitly |
+| [STRkit](https://github.com/davidlougheed/strkit) | 0.25.0 | HiFi, ONT | <code>local/strpadre-strkit:0.25.0</code> | BED with locus ID and motif | Build the local image before selecting this caller |
 
 The caller configuration files in [configs/](configs) define the image, catalog,
 platform support, resource request, and safe caller options. Exact source revisions
@@ -135,6 +136,15 @@ docker pull daleannear/strpadre:strdust-0.20.0-r1
 ~~~
 
 These are the default runtime images in <code>nextflow.config</code>. The caller YAML files retain image metadata for validation and provenance; use the matching <code>*_container</code> parameter to override a runtime image.
+
+To include STRkit, build its image once on the Docker host and add `strkit` to your caller list.
+
+~~~bash
+bash containers/build.sh strkit
+nextflow run main.nf -profile docker -params-file params.yml --callers longtr,strkit
+~~~
+
+STRkit uses the manifest boundaries and each allele's VCF anchor length to report repeat-only lengths. With `ploidy=1` it calls all contigs as haploid. Otherwise it uses the STRkit XX or XY preset for recognized sample sex and the autosomal preset when sex is unspecified. The XY preset treats X and Y as haploid across their full lengths, including PARs.
 
 ### 3. Build TRGT locally when you need it
 
@@ -216,7 +226,7 @@ HTT	chr4	3074876	3074966	0-based-half-open	GRCh38	CAG		HTT	HTT	HTT	chr4:3074877-
 Read [docs/locus-manifest.md](docs/locus-manifest.md) before creating a manifest.
 It is an identity and mapping layer, not a substitute for a caller's native catalog.
 
-For simple loci, STRpadre can generate LongTR, ATaRVa, and STRdust catalogs and a
+For simple loci, STRpadre can generate LongTR, ATaRVa, STRdust, and STRkit catalogs and a
 limited simple-repeat TRGT catalog:
 
 ~~~bash

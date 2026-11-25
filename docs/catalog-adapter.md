@@ -9,11 +9,11 @@ to an analysis bundle, and referenced from the caller YAML files before a costly
 nextflow run catalogs.nf -profile docker \
   --locus_manifest loci.tsv \
   --reference_fai reference.fa.fai \
-  --callers trgt,longtr,atarva,strdust \
+  --callers trgt,longtr,atarva,strdust,strkit \
   --outdir catalog-build
 ```
 
-Use `--callers all` for the same four-target selection. Names are normalized to lower
+Use `--callers all` for the same five-target selection. Names are normalized to lower
 case; unknown, duplicated, and empty selections fail before the container launches.
 
 The module creates `catalog-build/catalogs/` containing only the requested formats:
@@ -24,6 +24,7 @@ The module creates `catalog-build/catalogs/` containing only the requested forma
 | LongTR | `longtr.bed` | documented 1-based-start region BED with motif and locus ID |
 | ATaRVa | `atarva.bed.gz` and `.tbi` | sorted 0-based BED with motif and motif length, bgzip/tabix indexed |
 | STRdust | `strdust.bed` | 0-based three-column BED |
+| STRkit | `strkit.bed` | 0-based BED with `ID=<locus_id>;MOTIF=<primary_motif>` in column four. An optional `strkit_id` overrides `locus_id`. |
 
 It also writes `catalog_locus_mapping.tsv` and `catalog_adaptation_report.json`.
 These identify every generated native locus and record the target coordinate convention;

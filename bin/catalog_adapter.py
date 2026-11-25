@@ -24,7 +24,7 @@ except ImportError:
     pysam = None
 
 
-CALLERS = ("trgt", "longtr", "atarva", "strdust")
+CALLERS = ("trgt", "longtr", "atarva", "strdust", "strkit")
 REQUIRED_COLUMNS = {
     "locus_id",
     "chr",
@@ -159,14 +159,14 @@ def native_id(row: dict[str, str], caller: str) -> str:
     configured = row.get(f"{caller}_id", "")
     if configured:
         return configured
-    if caller in {"trgt", "longtr"}:
+    if caller in {"trgt", "longtr", "strkit"}:
         return row["locus_id"]
     return f"{row['chr']}:{int(row['start']) + 1}-{row['end']}"
 
 
 def validate_target_identity(rows: list[dict[str, str]], caller: str) -> None:
     """Reject records that a target format would make indistinguishable."""
-    if caller in {"trgt", "longtr"}:
+    if caller in {"trgt", "longtr", "strkit"}:
         identities: list[Any] = [native_id(row, caller) for row in rows]
     else:
         identities = [(row["chr"], row["start"], row["end"]) for row in rows]
@@ -180,6 +180,7 @@ def target_name(caller: str) -> str:
         "longtr": "longtr.bed",
         "atarva": "atarva.bed.gz",
         "strdust": "strdust.bed",
+        "strkit": "strkit.bed",
     }[caller]
 
 
@@ -217,6 +218,8 @@ def write_catalog(
                 handle.write(
                     f"{contig}\t{start}\t{end}\tID={visible_id};MOTIFS={motif};STRUC=<TR>\n"
                 )
+            elif caller == "strkit":
+                handle.write(f"{contig}\t{start}\t{end}\tID={visible_id};MOTIF={motif}\n")
             elif caller == "longtr":
                 handle.write(f"{contig}\t{start + 1}\t{end}\t{motif}\t{visible_id}\n")
             elif caller == "atarva":
@@ -322,7 +325,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--callers",
-        default="trgt,longtr,atarva,strdust",
+        default="all",
         help="Comma-separated callers or 'all'",
     )
     parser.add_argument(
