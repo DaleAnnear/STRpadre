@@ -9,7 +9,8 @@ process VALIDATE_INPUTS {
           path(trgt_config, name: 'configs/trgt.yml'), path(trgt_catalog), path(longtr_config, name: 'configs/longtr.yml'), path(longtr_catalog),
           path(atarva_config, name: 'configs/atarva.yml'), path(atarva_catalog), path(atarva_catalog_index),
           path(strdust_config, name: 'configs/strdust.yml'), path(strdust_catalog),
-          path(strkit_config, name: 'configs/strkit.yml'), path(strkit_catalog), path(consensus_config), val(callers)
+          path(strkit_config, name: 'configs/strkit.yml'), path(strkit_catalog),
+          path(medaka_config, name: 'configs/medaka.yml'), path(medaka_catalog), path(consensus_config), val(callers)
     path alignment_assets
 
     output:
@@ -26,6 +27,7 @@ process VALIDATE_INPUTS {
       --atarva-config '${atarva_config}' --atarva-catalog '${atarva_catalog}' --atarva-catalog-index '${atarva_catalog_index}' \\
       --strdust-config '${strdust_config}' --strdust-catalog '${strdust_catalog}' \\
       --strkit-config '${strkit_config}' --strkit-catalog '${strkit_catalog}' \\
+      --medaka-config '${medaka_config}' --medaka-catalog '${medaka_catalog}' \\
       --consensus-config '${consensus_config}' --output-dir validated --staged-alignment-dir .
     cp validated/versions.yml versions.yml
     """

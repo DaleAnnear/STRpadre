@@ -14,7 +14,7 @@ With no IMAGE arguments, all images are selected. By default, published images
 are pulled from Docker Hub and built locally only when the pull fails. --local
 forces local builds for the selected images.
 
-Images: normalizer, longtr, atarva, strdust, strkit, trgt, all
+Images: normalizer, longtr, atarva, strdust, strkit, medaka, trgt, all
 EOF
 }
 
@@ -45,9 +45,10 @@ while (( $# )); do
       add_image atarva
       add_image strdust
       add_image strkit
+      add_image medaka
       add_image trgt
       ;;
-    normalizer|longtr|atarva|strdust|strkit|trgt)
+    normalizer|longtr|atarva|strdust|strkit|medaka|trgt)
       add_image "$1"
       ;;
     *)
@@ -60,7 +61,7 @@ while (( $# )); do
 done
 
 if (( ${#selected[@]} == 0 )); then
-  selected=(normalizer longtr atarva strdust strkit trgt)
+  selected=(normalizer longtr atarva strdust strkit medaka trgt)
 fi
 
 normalizer_local=local/strpadre-normalizer:1.0.0
@@ -116,6 +117,9 @@ for image in "${selected[@]}"; do
       ;;
     strkit)
       docker build --file containers/Dockerfile.strkit --tag local/strpadre-strkit:0.25.0 .
+      ;;
+    medaka)
+      docker build --file containers/Dockerfile.medaka --tag local/strpadre-medaka:2.2.2 .
       ;;
     trgt)
       if [[ -f containers/vendor/trgt-5.1.0 ]]; then

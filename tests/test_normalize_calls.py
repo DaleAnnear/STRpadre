@@ -35,6 +35,32 @@ def test_each_documented_parser_emits_common_schema(tmp_path: Path, caller: str)
     assert row["parser_schema_version"] == "1.0.0"
 
 
+@pytest.mark.parametrize(
+    ("gt", "ploidy", "sd", "status", "lengths", "support"),
+    [
+        ("1|0", 2, "7,8", "valid_call", ("33", "30"), ("7", "8")),
+        ("./1", 1, "7", "valid_call", ("33", "."), ("7", ".")),
+        (".|1", 2, "7", "valid_no_call", (".", "33"), (".", "7")),
+        ("1/1", 2, "15", "valid_call", ("33", "33"), (".", ".")),
+        ("2/0", 2, "5,6", "valid_call", ("0", "30"), ("5", "6")),
+    ],
+)
+def test_medaka_replacement_alleles(gt, ploidy, sd, status, lengths, support):
+    from normalize_calls import VcfRecord, load_manifest, map_locus, parse_record
+
+    record = VcfRecord(
+        "chr1", 101, "chr1_100_130", "CAG" * 10, ["CAG" * 11, "<DEL>"], "PASS",
+        {"rec": f"tr_chr1_100_130_pad_90_140_fwd_hap0_phased-set0_ploidy{ploidy}"},
+        {"GT": gt, "SD": sd},
+    )
+    loci, _ = load_manifest(FIXTURES / "manifest.tsv")
+    row = parse_record("medaka", record, map_locus("medaka", record, loci), "S1", "ont", "raw.vcf")
+    assert row["call_status"] == status
+    assert (row["allele1_length_bp"], row["allele2_length_bp"]) == lengths
+    assert (row["read_support_allele1"], row["read_support_allele2"]) == support
+    assert row["allele1_copy_number"] == row["allele2_copy_number"] == "."
+
+
 def test_filtered_and_haploid_calls_do_not_invent_second_allele(tmp_path: Path) -> None:
     vcf = tmp_path / "haploid.vcf"
     vcf.write_text("##fileformat=VCFv4.3\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tS1\nchr1\t101\t.\tCAG\tCAGCAG\t.\tLOW_SUPPORT\tEND=130\tGT:FRB:SUP\t1:30:4\n")

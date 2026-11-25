@@ -1,0 +1,10 @@
+FROM quay.io/biocontainers/medaka:2.2.2--py312h3050eb1_0@sha256:18d5d73aa7f0aa70d0f623c4d34ce83ca791ba9c14c751bb3ed5d3452a8fb4c3
+
+LABEL org.opencontainers.image.source="https://github.com/nanoporetech/medaka" \
+      org.opencontainers.image.version="2.2.2"
+
+RUN python3 -m pip install --no-cache-dir PyYAML==6.0.2 \
+    && python3 -c "import pyabpoa, yaml" \
+    && medaka tandem --help >/dev/null
+
+USER nobody

@@ -6,7 +6,7 @@
   "required": ["schema_version", "caller", "container", "tool_version", "platforms", "threads", "resources", "phased_reads_expected", "additional_args", "options"],
   "properties": {
     "schema_version": {"const": "1.0"},
-    "caller": {"enum": ["trgt", "longtr", "atarva", "strdust", "strkit"]},
+    "caller": {"enum": ["trgt", "longtr", "atarva", "strdust", "strkit", "medaka"]},
     "container": {"type": "string", "minLength": 1},
     "tool_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"},
     "reference_build": {"type": "string", "minLength": 1},

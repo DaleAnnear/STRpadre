@@ -34,6 +34,13 @@ bash containers/build.sh strkit
 bash tests/test_strkit_docker.sh
 ```
 
+The Medaka Tandem integration runs its polishing model on indexed synthetic ONT BAM and CRAM alignments and checks the normalized genotypes.
+
+```bash
+bash containers/build.sh medaka
+bash tests/test_medaka_docker.sh
+```
+
 Caller executable smoke tests require images built under their license conditions:
 
 ```bash

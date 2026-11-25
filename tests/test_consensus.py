@@ -51,13 +51,21 @@ def test_end_to_end_consensus_retains_matrix_statuses(tmp_path: Path) -> None:
     rows = []
     for caller, one, two in [("trgt", "30", "33"), ("longtr", "31", "33"), ("atarva", "30", "34")]:
         rows.append({"sample_id": "S1", "platform": "hifi", "canonical_locus_id": "L1", "chr": "chr1", "canonical_start": "100", "canonical_end": "130", "reference_build": "test-build", "motif": "CAG", "caller": caller, "call_status": "valid_call", "allele1_length_bp": one, "allele2_length_bp": two, "allele1_copy_number": "10", "allele2_copy_number": "11", "read_support_allele1": "9", "read_support_allele2": "9", "source_vcf": caller + ".vcf"})
+    for caller in ("medaka", "longtr"):
+        rows.append({**rows[0], "sample_id": "S2", "platform": "ont", "caller": caller,
+                     "source_vcf": f"S2.{caller}.vcf"})
     with gzip.open(norm, "wt", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=columns, delimiter="\t"); writer.writeheader(); writer.writerows(rows)
     out = tmp_path / "out"
-    subprocess.run([sys.executable, str(ROOT / "bin" / "build_consensus.py"), "--normalized-files", str(norm), "--locus-manifest", str(FIXTURES / "manifest.tsv"), "--samplesheet", str(sample_sheet), "--config", str(ROOT / "configs" / "consensus.yml"), "--callers", "trgt,longtr,atarva,strdust", "--output-dir", str(out)], check=True)
+    subprocess.run([sys.executable, str(ROOT / "bin" / "build_consensus.py"), "--normalized-files", str(norm), "--locus-manifest", str(FIXTURES / "manifest.tsv"), "--samplesheet", str(sample_sheet), "--config", str(ROOT / "configs" / "consensus.yml"), "--callers", "trgt,longtr,atarva,strdust,medaka", "--output-dir", str(out)], check=True)
     with gzip.open(out / "caller_matrix.tsv.gz", "rt") as handle:
         matrix = list(csv.DictReader(handle, delimiter="\t"))
     assert any(row["sample_id"] == "S2" and row["caller"] == "trgt" and row["caller_status"] == "not_applicable_to_platform" for row in matrix)
+    assert any(row["sample_id"] == "S1" and row["caller"] == "medaka" and row["caller_status"] == "not_applicable_to_platform" for row in matrix)
+    with gzip.open(out / "consensus.tsv.gz", "rt") as handle:
+        result = next(r for r in csv.DictReader(handle, delimiter="\t") if r["sample_id"] == "S2")
+    assert result["contributing_callers"] == "longtr,medaka"
+    assert result["consensus_status"] == "concordant"
     assert (out / "consensus.vcf").is_file()
 
 def test_consensus_vcf_is_sorted_when_manifest_is_not(tmp_path: Path) -> None:

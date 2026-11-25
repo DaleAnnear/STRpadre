@@ -28,7 +28,7 @@ def load(path: Path) -> list[dict[str, str]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--caller", choices=["longtr", "atarva", "strdust", "strkit", "trgt"], required=True
+        "--caller", choices=["longtr", "atarva", "strdust", "strkit", "medaka", "trgt"], required=True
     )
     parser.add_argument("--locus-manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -49,7 +49,7 @@ def main() -> int:
                     handle.write(f"{row['chr']}\t{start}\t{end}\t{motif}\t{len(motif)}\n")
                 elif args.caller == "strkit":
                     handle.write(f"{row['chr']}\t{start}\t{end}\tID={native_id};MOTIF={motif}\n")
-                elif args.caller == "strdust":
+                elif args.caller in {"strdust", "medaka"}:
                     handle.write(f"{row['chr']}\t{start}\t{end}\n")
                 else:
                     if not args.allow_simple_trgt or row.get("repeat_structure"):

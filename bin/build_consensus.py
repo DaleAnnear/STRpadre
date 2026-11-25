@@ -19,6 +19,7 @@ import yaml
 MISSING = "."
 PLATFORMS = {
     "trgt": {"hifi"},
+    "medaka": {"ont"},
     "longtr": {"hifi", "ont"},
     "atarva": {"hifi", "ont"},
     "strdust": {"hifi", "ont"},

@@ -24,7 +24,7 @@ except ImportError:
     pysam = None
 
 
-CALLERS = ("trgt", "longtr", "atarva", "strdust", "strkit")
+CALLERS = ("trgt", "longtr", "atarva", "strdust", "strkit", "medaka")
 REQUIRED_COLUMNS = {
     "locus_id",
     "chr",
@@ -156,6 +156,8 @@ def load_manifest(path: Path, fai: dict[str, int]) -> tuple[list[dict[str, str]]
 
 def native_id(row: dict[str, str], caller: str) -> str:
     """Return caller-visible ID or a coordinate identity where the format has no ID."""
+    if caller == "medaka":
+        return f"{row['chr']}_{row['start']}_{row['end']}"
     configured = row.get(f"{caller}_id", "")
     if configured:
         return configured
@@ -181,6 +183,7 @@ def target_name(caller: str) -> str:
         "atarva": "atarva.bed.gz",
         "strdust": "strdust.bed",
         "strkit": "strkit.bed",
+        "medaka": "medaka.bed",
     }[caller]
 
 

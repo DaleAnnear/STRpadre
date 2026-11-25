@@ -1,0 +1,12 @@
+schema_version: "1.0"
+caller: medaka
+container: local/strpadre-medaka:2.2.2
+tool_version: "2.2.2"
+platforms: [ont]
+threads: 2
+resources: { memory: 12 GB, time: 24h }
+phased_reads_expected: false
+additional_args: []
+options:
+  # Auto-select a consensus model from ONT basecaller metadata by default.
+  model: null

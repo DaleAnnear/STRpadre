@@ -8,6 +8,7 @@ longtr_config: configs/longtr.yml
 atarva_config: configs/atarva.yml
 strdust_config: configs/strdust.yml
 strkit_config: configs/strkit.yml
+medaka_config: configs/medaka.yml
 consensus_config: configs/consensus.yml
 outdir: results
-callers: [trgt, longtr, atarva, strdust, strkit]
+callers: [trgt, longtr, atarva, strdust, strkit, medaka]

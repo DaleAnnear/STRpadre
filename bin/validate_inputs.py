@@ -20,9 +20,10 @@ try:
 except ImportError:  # Unit tests may exercise the schema layer without pysam.
     pysam = None
 
-CALLERS = ("trgt", "longtr", "atarva", "strdust", "strkit")
+CALLERS = ("trgt", "longtr", "atarva", "strdust", "strkit", "medaka")
 PLATFORMS = {
     "trgt": {"hifi"},
+    "medaka": {"ont"},
     "longtr": {"hifi", "ont"},
     "atarva": {"hifi", "ont"},
     "strdust": {"hifi", "ont"},
@@ -33,6 +34,7 @@ OPTION_KEYS = {
     "longtr": {"min_mapq", "min_mean_qual", "max_tr_len", "min_reads", "indel_flank_len", "phased_bam", "output_filters", "haploid_chromosomes", "use_lb_tags"},
     "atarva": {"map_qual", "min_reads", "max_reads", "snp_dist", "snp_count", "snp_qual", "flank", "haplotag", "decompose", "loci_wise", "amplicon", "somatic", "karyotype_default"},
     "strkit": {"seed"},
+    "medaka": {"model"},
     "strdust": {"minlen", "support", "consensus_reads", "max_number_reads", "max_locus", "find_outliers", "phasing", "haploid_chromosomes"},
 }
 SAFE_SAMPLE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -131,6 +133,7 @@ def valid_additional_args(caller: str, args: list[str]) -> None:
         "trgt": {"-g", "--genome", "-r", "--reads", "-b", "--repeats", "-o", "--output-prefix"},
         "longtr": {"--bams", "--fasta", "--regions", "--tr-vcf", "--haploid-chrs"},
         "atarva": {"-f", "--fasta", "-b", "--bam", "-r", "--regions", "-o", "--vcf"},
+        "medaka": {"--decompose", "--sample_name", "--workers", "--model", "-m", "--auto_model", "--phasing"},
         "strkit": {
             "--ref",
             "-r",
@@ -158,7 +161,12 @@ def valid_additional_args(caller: str, args: list[str]) -> None:
     for token in args:
         if not isinstance(token, str) or not re.fullmatch(r"[^\s;&|`$<>\\]+", token):
             fail(f"{caller}: additional_args must be individual safe argv tokens")
-        if token.split("=", 1)[0] in forbidden:
+        flag = token.split("=", 1)[0]
+        # argparse accepts unambiguous long-option prefixes in Medaka Tandem.
+        abbreviated = caller == "medaka" and flag.startswith("--") and any(
+            name.startswith(flag) for name in forbidden
+        )
+        if flag in forbidden or abbreviated:
             fail(f"{caller}: additional_args may not replace workflow-owned input/output argument {token}")
 
 
@@ -182,6 +190,9 @@ def validate_caller_config(caller: str, config_path: Path, expected_catalog: Pat
         fail(f"{caller}: unknown options are forbidden: {sorted(unknown_options)}")
     if caller == "longtr" and not isinstance(cfg["options"].get("use_lb_tags", False), bool):
         fail("longtr: options.use_lb_tags must be true or false")
+    if caller == "medaka" and cfg["options"].get("model") is not None:
+        if not isinstance(cfg["options"]["model"], str) or not cfg["options"]["model"].strip():
+            fail("medaka: options.model must be a consensus model name or null")
     validate_sex_chromosome_policy(caller, cfg)
     valid_additional_args(caller, cfg["additional_args"])
     return cfg
@@ -301,9 +312,11 @@ def catalog_records(caller: str, path: Path, loci: dict[str, dict[str, str]]) ->
                 fail(f"ATaRVa catalog motif length mismatch at {contig}:{start}-{end}")
         else:
             if len(fields) < 3:
-                fail("STRdust catalog requires BED columns chrom, start, end")
+                fail(f"{caller} catalog requires BED columns chrom, start, end")
             contig, start, end, native_id, motif = fields[0], int(fields[1]), int(fields[2]), None, None
         row = find_locus(loci, caller, native_id, contig, start, end, motif)
+        if caller == "medaka":
+            native_id = f"{contig}_{start}_{end}"
         records.append({"canonical_locus_id": row["locus_id"], "caller": caller, "native_locus_id": native_id or f"{contig}:{start + 1}-{end}", "chr": contig, "start": str(start), "end": str(end), "motif": motif or row["primary_motif"]})
     if not records:
         fail(f"{caller} native catalog contains no records")
@@ -386,6 +399,8 @@ def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ("samplesheet", "reference", "reference-fai", "locus-manifest", "trgt-config", "trgt-catalog", "longtr-config", "longtr-catalog", "atarva-config", "atarva-catalog", "atarva-catalog-index", "strdust-config", "strdust-catalog", "consensus-config"):
         parser.add_argument(f"--{key}", required=True)
+    parser.add_argument("--medaka-config")
+    parser.add_argument("--medaka-catalog")
     parser.add_argument("--strkit-config")
     parser.add_argument("--strkit-catalog")
     parser.add_argument("--callers", required=True)
@@ -412,10 +427,12 @@ def main() -> int:
         configs = {}
         mappings: list[dict[str, str]] = []
         for caller in CALLERS:
-            if caller == "strkit" and not (args.strkit_config and args.strkit_catalog):
-                if caller in callers or args.strkit_config or args.strkit_catalog:
-                    fail("STRkit requires --strkit-config and --strkit-catalog")
-                continue
+            if caller in {"strkit", "medaka"}:
+                cfg_path, bed_path = getattr(args, f"{caller}_config"), getattr(args, f"{caller}_catalog")
+                if not (cfg_path and bed_path):
+                    if caller in callers or cfg_path or bed_path:
+                        fail(f"{caller} requires --{caller}-config and --{caller}-catalog")
+                    continue
             config = validate_caller_config(caller, Path(getattr(args, f"{caller}_config")), Path(getattr(args, f"{caller}_catalog")))
             configs[caller] = config
             if caller == "atarva":
@@ -423,6 +440,10 @@ def main() -> int:
                 if not catalog_index.is_file() or catalog_index.suffix != ".tbi":
                     fail("ATaRVa requires a bgzip-compressed catalog with a staged .tbi index")
             mappings.extend(catalog_records(caller, Path(getattr(args, f"{caller}_catalog")), loci))
+        if "medaka" in callers:
+            for sample in samples:
+                if sample["platform"] == "ont" and sample.get("sex", "").lower() not in SEX_ALIASES:
+                    fail(f"{sample['sample_id']}: Medaka Tandem requires sex (male/XY or female/XX)")
         validate_sex_aware_samples(samples, loci, configs, callers, build)
         consensus = load_yaml(Path(args.consensus_config))
         validate_schema(consensus, "consensus.schema.json", Path(args.consensus_config))

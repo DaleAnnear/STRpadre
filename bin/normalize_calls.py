@@ -118,6 +118,9 @@ def native_coordinates(caller: str, record: VcfRecord) -> tuple[int, int, str | 
         return int(info_text(record, "START")) - 1, int(info_text(record, "END")), None if record.record_id == MISSING else record.record_id, info_text(record, "MOTIF").split(",")[0]
     if caller == "atarva":
         return int(info_text(record, "START")), int(info_text(record, "END")), info_text(record, "ID"), info_text(record, "MOTIF")
+    if caller == "medaka":
+        start = record.pos - 1
+        return start, start + len(record.ref), None, None
     if caller == "strkit":
         return (
             int(info_text(record, "BED_START")),
@@ -275,6 +278,36 @@ def parse_record(caller: str, record: VcfRecord, locus: dict[str, str], sample_i
         lengths = pair(number_values(record.format.get("AL", MISSING)))
         copies = pair(number_values(record.format.get("CN", MISSING)))
         supports = pair(number_values(record.format.get("SD", MISSING)))
+    elif caller == "medaka":
+        # Replacement-style REF/ALT span the catalog interval without a padding base.
+        alleles = [sequence1, sequence2]
+        depths = number_values(record.format.get("SD", MISSING))
+        native_records = info_text(record, "rec").split(",")
+        if len(native_records) == 1 and native_records[0].endswith("_ploidy1"):
+            # Medaka encodes a single haploid consensus in a two-slot GT (e.g. ./1).
+            called = [seq for seq in alleles if seq != MISSING]
+            if len(called) == 1:
+                alleles = list(pair(called))
+                status = "filtered_call" if filtered else "valid_call"
+        elif len(depths) == 1:
+            if alleles[0] == MISSING:
+                depths = [MISSING, *depths]
+            elif alleles[1] != MISSING:
+                # A single pooled depth for two alleles has no per-haplotype assignment.
+                depths = []
+        repeat_sequences = []
+        repeat_lengths = []
+        for allele in alleles:
+            if re.fullmatch(r"[ACGTNacgtn]+", allele):
+                repeat_sequences.append(allele)
+                repeat_lengths.append(str(len(allele)))
+            else:
+                repeat_sequences.append(MISSING)
+                repeat_lengths.append("0" if allele == "<DEL>" else MISSING)
+        sequence1, sequence2 = pair(repeat_sequences)
+        lengths = pair(repeat_lengths)
+        supports = pair(depths)
+        copies = (MISSING, MISSING)
     elif caller == "strkit":
         copies = pair(number_values(record.format.get("MC", MISSING)))
         supports = pair(number_values(record.format.get("AD", MISSING)))
@@ -298,7 +331,7 @@ def parse_record(caller: str, record: VcfRecord, locus: dict[str, str], sample_i
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--caller", choices=["trgt", "longtr", "atarva", "strdust", "strkit"], required=True
+        "--caller", choices=["trgt", "longtr", "atarva", "strdust", "strkit", "medaka"], required=True
     )
     parser.add_argument("--sample-id", required=True)
     parser.add_argument("--platform", choices=["hifi", "ont"], required=True)

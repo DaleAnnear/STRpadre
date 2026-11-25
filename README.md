@@ -63,12 +63,12 @@ sample sheet + BAM/CRAM + reference + canonical loci
                          v
                 containerised fail-fast preflight
                          |
-   +---------------------+---------------------+---------------------+
-   |                     |                     |                     |
- TRGT                  LongTR                ATaRVa          STRdust / STRkit
- (HiFi)              (HiFi/ONT)            (HiFi/ONT)           (HiFi/ONT)
-   |                     |                     |                     |
-   +---- native VCFs, logs, and tool versions are retained ----------+
+   +---------------------+---------------------------+
+   |                     |                           |
+ TRGT        LongTR / ATaRVa / STRdust / STRkit   Medaka Tandem
+ (HiFi)                (HiFi/ONT)                    (ONT)
+   |                     |                           |
+   +--------- native VCFs, logs, and tool versions --+
                          |
                          v
               caller-specific loss-aware normalisation
@@ -85,6 +85,7 @@ sample sheet + BAM/CRAM + reference + canonical loci
 | [LongTR](https://github.com/gymrek-lab/LongTR) | 1.2 | HiFi, ONT | <code>daleannear/strpadre:longtr-1.2-r1</code> | 1-based-start BED, motif, optional name | Coordinate-sorted/indexed BAM/CRAM with valid read-group metadata |
 | [ATaRVa](https://github.com/SowpatiLab/ATaRVa) | 0.7.1 | HiFi, ONT | <code>daleannear/strpadre:atarva-0.7.1-r1</code> | sorted bgzip+tabix BED | Coordinate-sorted BAM/CRAM; MD/CS or <code>=/X</code> CIGAR is preferred |
 | [STRdust](https://github.com/wdecoster/STRdust) | 0.20.0 | HiFi, ONT | <code>daleannear/strpadre:strdust-0.20.0-r1</code> | standard BED | BAM/CRAM plus reference; choose the unphased policy explicitly |
+| [Medaka Tandem](https://github.com/nanoporetech/medaka/tree/v2.2.2/medaka/tandem) | 2.2.2 | ONT | `local/strpadre-medaka:2.2.2` | three-column BED | Indexed BAM/CRAM, sample sex and a matching ONT consensus model |
 | [STRkit](https://github.com/davidlougheed/strkit) | 0.25.0 | HiFi, ONT | <code>local/strpadre-strkit:0.25.0</code> | BED with locus ID and motif | Build the local image before selecting this caller |
 
 The caller configuration files in [configs/](configs) define the image, catalog,
@@ -145,6 +146,18 @@ nextflow run main.nf -profile docker -params-file params.yml --callers longtr,st
 ~~~
 
 STRkit uses the manifest boundaries and each allele's VCF anchor length to report repeat-only lengths. With `ploidy=1` it calls all contigs as haploid. Otherwise it uses the STRkit XX or XY preset for recognized sample sex and the autosomal preset when sex is unspecified. The XY preset treats X and Y as haploid across their full lengths, including PARs.
+
+For a mixed cohort, select `medaka` and `trgt` alongside the four shared callers. Each sample then has five eligible callers. Build the local caller images before running (see the TRGT build instructions below).
+
+~~~bash
+bash containers/build.sh medaka strkit
+nextflow run main.nf -profile docker -params-file params.yml \
+  --callers trgt,longtr,atarva,strdust,strkit,medaka
+~~~
+
+Medaka requires `sex` for ONT rows (`male`/`XY` or `female`/`XX`). By default it detects the consensus model from the alignment's basecaller metadata. Set `options.model` in `configs/medaka.yml` when that metadata is missing. The model must be bundled in the image or available to Medaka at runtime. Hybrid phasing supports reads with or without HP tags. Medaka uses GRCh38 X/Y and PAR settings by default. For another assembly, pass the matching `--sex_chrs` and `--par_regions` through `additional_args`.
+
+Medaka reports polished repeat sequences and spanning-read depths. STRpadre measures the repeat sequences in base pairs and leaves motif copy numbers missing. Inspect the native VCF and skipped-region BEDs in `raw/medaka/<sample>.medaka.native/tandem/`.
 
 ### 3. Build TRGT locally when you need it
 

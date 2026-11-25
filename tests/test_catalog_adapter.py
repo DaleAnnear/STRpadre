@@ -83,8 +83,9 @@ def test_adapter_emits_all_native_catalogs_and_provenance(tmp_path: Path, monkey
     assert (output / "atarva.bed.gz.tbi").is_file()
     with (output / "catalog_locus_mapping.tsv").open(newline="") as handle:
         mappings = list(csv.DictReader(handle, delimiter="\t"))
-    assert len(mappings) == 10
-    assert {row["caller"] for row in mappings} == {"trgt", "longtr", "atarva", "strdust", "strkit"}
+    assert (output / "medaka.bed").read_text() == (output / "strdust.bed").read_text()
+    assert len(mappings) == 12
+    assert {row["caller"] for row in mappings} == {"trgt", "longtr", "atarva", "strdust", "strkit", "medaka"}
     assert {row["catalog_coordinate_system"] for row in mappings if row["caller"] == "longtr"} == {
         "1-based-closed"
     }

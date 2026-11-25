@@ -18,6 +18,7 @@ def caller_config(caller: str, build: str = "test-build") -> dict:
         "atarva": "0.7.1",
         "strdust": "0.20.0",
         "strkit": "0.25.0",
+        "medaka": "2.2.2",
     }
     platforms = {
         "trgt": ["hifi"],
@@ -25,6 +26,7 @@ def caller_config(caller: str, build: str = "test-build") -> dict:
         "atarva": ["hifi", "ont"],
         "strdust": ["hifi", "ont"],
         "strkit": ["hifi", "ont"],
+        "medaka": ["ont"],
     }
     return {"schema_version": "1.0", "caller": caller, "container": f"local/{caller}:{versions[caller]}", "tool_version": versions[caller], "reference_build": build, "platforms": platforms[caller], "native_catalog": "ignored", "threads": 1 if caller == "longtr" else 2, "resources": {"memory": "4 GB", "time": "1h"}, "phased_reads_expected": False, "additional_args": [], "options": {}}
 
@@ -34,7 +36,7 @@ def invoke(monkeypatch, args: list[str]) -> int:
     return validate_inputs.main()
 
 
-def test_preflight_restricts_trgt_to_hifi(tmp_path: Path, monkeypatch) -> None:
+def test_preflight_platform_specific_callers(tmp_path: Path, monkeypatch) -> None:
     reference = tmp_path / "ref.fa"
     reference.write_text(">chr1\n" + "N" * 200 + "\n")
     (tmp_path / "ref.fa.fai").write_text("chr1\t200\t6\t200\t201\n")
@@ -43,12 +45,13 @@ def test_preflight_restricts_trgt_to_hifi(tmp_path: Path, monkeypatch) -> None:
     bam, bai, cram, crai = (tmp_path / "a.bam", tmp_path / "a.bam.bai", tmp_path / "b.cram", tmp_path / "b.cram.crai")
     for path in (bam, bai, cram, crai): path.touch()
     samples = tmp_path / "samples.csv"
-    samples.write_text("sample_id,platform,alignment,alignment_index\nS_HIFI,hifi," + str(bam) + "," + str(bai) + "\nS_ONT,ont," + str(cram) + "," + str(crai) + "\n")
+    samples.write_text("sample_id,platform,alignment,alignment_index,sex\nS_HIFI,hifi," + str(bam) + "," + str(bai) + ",\nS_ONT,ont," + str(cram) + "," + str(crai) + ",XY\n")
     catalogs = {}
     for caller, content in {
         "trgt": "chr1\t100\t130\tID=L1;MOTIFS=CAG;STRUC=<TR>\n",
         "longtr": "chr1\t101\t130\tCAG\tL1\n",
         "strdust": "chr1\t100\t130\n",
+        "medaka": "chr1\t100\t130\n",
         "strkit": "chr1\t100\t130\tID=L1;MOTIF=CAG\n",
     }.items():
         catalogs[caller] = tmp_path / f"{caller}.bed"; catalogs[caller].write_text(content)
@@ -58,7 +61,7 @@ def test_preflight_restricts_trgt_to_hifi(tmp_path: Path, monkeypatch) -> None:
     with gzip.open(atarva, chr(119) + chr(116)) as handle: handle.write(atarva_plain.read_text()); Path(str(atarva) + chr(46) + chr(116) + chr(98) + chr(105)).touch()
     catalogs["atarva"] = atarva
     configs = {}
-    for caller in ("trgt", "longtr", "atarva", "strdust", "strkit"):
+    for caller in ("trgt", "longtr", "atarva", "strdust", "strkit", "medaka"):
         configs[caller] = tmp_path / f"{caller}.yml"; configs[caller].write_text(yaml.safe_dump(caller_config(caller)))
     consensus = tmp_path / "consensus.yml"
     consensus.write_text((Path(__file__).parents[1] / "configs" / "consensus.yml").read_text())
@@ -73,14 +76,14 @@ def test_preflight_restricts_trgt_to_hifi(tmp_path: Path, monkeypatch) -> None:
         "--locus-manifest",
         str(manifest),
         "--callers",
-        "trgt,longtr,atarva,strdust,strkit",
+        "trgt,longtr,atarva,strdust,strkit,medaka",
         "--consensus-config",
         str(consensus),
         "--output-dir",
         str(out),
         "--skip-alignment-header-check",
     ]
-    for caller in ("trgt", "longtr", "atarva", "strdust", "strkit"):
+    for caller in ("trgt", "longtr", "atarva", "strdust", "strkit", "medaka"):
         args += [f"--{caller}-config", str(configs[caller]), f"--{caller}-catalog", str(catalogs[caller])]
     args += ["--atarva-catalog-index", str(atarva) + ".tbi"]
     assert invoke(monkeypatch, args) == 0
@@ -92,7 +95,9 @@ def test_preflight_restricts_trgt_to_hifi(tmp_path: Path, monkeypatch) -> None:
         "strdust",
         "strkit",
     ]
-    assert report["samples"][1]["eligible_callers"] == ["longtr", "atarva", "strdust", "strkit"]
+    assert report["samples"][1]["eligible_callers"] == ["longtr", "atarva", "strdust", "strkit", "medaka"]
+    samples.write_text(samples.read_text().replace(",XY\n", ",\n"))
+    assert invoke(monkeypatch, args) == 2
 
 
 def test_bad_caller_name_is_rejected() -> None:

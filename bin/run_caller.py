@@ -17,6 +17,7 @@ import yaml
 
 PLATFORMS = {
     "trgt": {"hifi"},
+    "medaka": {"ont"},
     "longtr": {"hifi", "ont"},
     "atarva": {"hifi", "ont"},
     "strdust": {"hifi", "ont"},
@@ -253,6 +254,26 @@ def build_command(caller: str, config: dict[str, Any], ns: argparse.Namespace, o
                 command.append(flag)
         command.extend(extra)
         return command, raw_vcf, False
+    if caller == "medaka":
+        sex = normalized_sex(ns.sex)
+        if sex is None:
+            raise CallerError(f"{ns.sample_id}: Medaka Tandem requires male/XY or female/XX")
+        output = outdir / "tandem"
+        command = [
+            "medaka", "tandem", str(ns.alignment), str(ns.reference), str(ns.catalog),
+            sex, str(output), "--workers", str(config["threads"]), "--sample_name", ns.sample_id,
+        ]
+        model = option(config, "model")
+        if model:
+            command.extend(["--model", model])
+        else:
+            command.extend(["--auto_model", "consensus", str(ns.alignment)])
+        if ns.ploidy == "1":
+            command.extend(["--phasing", "unphased"])
+        elif config.get("phased_reads_expected"):
+            command.extend(["--phasing", "prephased"])
+        command.extend(extra)
+        return command, output / "medaka_to_ref.TR.vcf", False
     if caller == "strkit":
         raw_vcf = outdir / f"{output_stem}.original.vcf"
         ploidy = "haploid" if ns.ploidy == "1" else karyotype(ns.sex, "diploid_autosomes")
@@ -292,6 +313,7 @@ def version_probe(caller: str) -> tuple[str, str]:
         "atarva": ["atarva", "--version"],
         "strdust": ["STRdust", "--version"],
         "strkit": ["strkit", "--version"],
+        "medaka": ["medaka", "--version"],
     }
     output = command_output(probes[caller])
     return " ".join(probes[caller]), output
@@ -398,7 +420,7 @@ def main() -> int:
             with log.open("a") as stderr_handle:
                 stderr_handle.write("No callable sex-chromosome loci for this sample; emitted an empty VCF.\n")
         normalise_vcfs(raw_vcfs, ns.output_dir / "calls.vcf.gz", log, ns.caller)
-        provenance = {"caller": ns.caller, "sample_id": ns.sample_id, "platform": ns.platform, "configured_tool_version": config["tool_version"], "executable_version_probe": probe_command, "executable_version_output": actual_version, "argv": commands, "container": config["container"], "native_vcfs": [path.name for path in raw_vcfs], "normalized_native_vcf": "calls.vcf.gz", "sex_chromosome_ploidy_plan": ploidy_plan}
+        provenance = {"caller": ns.caller, "sample_id": ns.sample_id, "platform": ns.platform, "configured_tool_version": config["tool_version"], "executable_version_probe": probe_command, "executable_version_output": actual_version, "argv": commands, "container": config["container"], "native_vcfs": [str(path.relative_to(ns.output_dir)) for path in raw_vcfs], "normalized_native_vcf": "calls.vcf.gz", "sex_chromosome_ploidy_plan": ploidy_plan}
         (ns.output_dir / "command.json").write_text(json.dumps(provenance, indent=2) + "\n")
         (ns.output_dir / "versions.yml").write_text(yaml.safe_dump({"caller": ns.caller, "configured_version": config["tool_version"], "executable_probe": probe_command, "executable_output": actual_version, "bcftools": command_output(["bcftools", "--version"]).splitlines()[0], "tabix": command_output(["tabix", "--version"]).splitlines()[0]}, sort_keys=False))
     except (CallerError, OSError, subprocess.CalledProcessError) as exc:

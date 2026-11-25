@@ -50,6 +50,12 @@ tools:
     source_revision: v0.25.0
     license: GPL-3.0-only
     container: local/strpadre-strkit:0.25.0
+  medaka:
+    version: "2.2.2"
+    source_url: https://github.com/nanoporetech/medaka
+    source_revision: v2.2.2
+    license: Oxford Nanopore Technologies PLC Public License Version 1.0
+    container: local/strpadre-medaka:2.2.2
   normalizer_consensus:
     version: "1.0.0"
     source_url: local://bin
