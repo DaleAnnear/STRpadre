@@ -123,45 +123,53 @@ git clone https://github.com/DaleAnnear/STRpadre.git
 cd STRpadre
 ~~~
 
-### 2. Obtain the standard runtime images
+### 2. Obtain the runtime images
 
-Docker Hub hosts the images for LongTR, ATaRVa, STRdust, STRkit, Medaka Tandem, and the
-normaliser/consensus step. The published STRkit and Medaka Tandem tags target
-`linux/amd64`. [Docker Hub tags](https://hub.docker.com/r/daleannear/strpadre/tags)
+The workflow needs the normaliser image and one image for each caller you select.
+Run the following commands from the repository root.
 
-The checked-in Nextflow defaults use local image names for STRkit and Medaka Tandem.
-To run the published images, add these top-level settings to your `params.yml`:
+#### Use published images
+
+Add the entries you need to your `params.yml`. With `-profile docker`, Nextflow
+uses these image names and Docker pulls any missing images on first use.
+Available tags and platforms are listed on [Docker Hub](https://hub.docker.com/r/daleannear/strpadre/tags).
 
 ~~~yaml
+normalizer_container: daleannear/strpadre:normalizer-1.0.0-r1
+longtr_container: daleannear/strpadre:longtr-1.2-r1
+atarva_container: daleannear/strpadre:atarva-0.7.1-r1
+strdust_container: daleannear/strpadre:strdust-0.20.0-r1
 strkit_container: daleannear/strpadre:strkit-0.25.0-r1
 medaka_container: daleannear/strpadre:medaka-2.2.2-r1
 ~~~
 
-For matching provenance in `command.json`, set `container` in `configs/strkit.yml`
-and `configs/medaka.yml` to the corresponding tag above. With `-profile docker`,
-Docker pulls each selected image on first use. To fetch them ahead of time:
+You can also prefetch individual images with `docker pull`.
 
 ~~~bash
 docker pull daleannear/strpadre:normalizer-1.0.0-r1
-docker pull daleannear/strpadre:longtr-1.2-r1
-docker pull daleannear/strpadre:atarva-0.7.1-r1
-docker pull daleannear/strpadre:strdust-0.20.0-r1
-docker pull daleannear/strpadre:strkit-0.25.0-r1
-docker pull daleannear/strpadre:medaka-2.2.2-r1
 ~~~
 
-STRkit uses the manifest boundaries and each allele's VCF anchor length to report repeat-only lengths. With `ploidy=1` it calls all contigs as haploid. Otherwise it uses the STRkit XX or XY preset for recognized sample sex and the autosomal preset when sex is unspecified. The XY preset treats X and Y as haploid across their full lengths, including PARs.
+#### Build images locally
 
-For a mixed cohort, select `medaka` and `trgt` alongside the four shared callers. Each sample then has five eligible callers. Build the TRGT image as described in step 3 before running this command.
+Pass `--local` and the image names to the build script. This example builds
+the normaliser and LongTR for a single-caller run.
 
 ~~~bash
-nextflow run main.nf -profile docker -params-file params.yml \
-  --callers trgt,longtr,atarva,strdust,strkit,medaka
+bash containers/build.sh --local normalizer longtr
 ~~~
 
-Medaka requires `sex` for ONT rows (`male`/`XY` or `female`/`XX`). By default it detects the consensus model from the alignment's basecaller metadata. Set `options.model` in `configs/medaka.yml` when that metadata is missing. The model must be bundled in the image or available to Medaka at runtime. Hybrid phasing supports reads with or without HP tags. Medaka uses GRCh38 X/Y and PAR settings by default. For another assembly, pass the matching `--sex_chrs` and `--par_regions` through `additional_args`.
+To build the full set, use `all`, then run the smoke tests.
 
-Medaka reports polished repeat sequences and spanning-read depths. STRpadre measures the repeat sequences in base pairs and leaves motif copy numbers missing. Inspect the native VCF and skipped-region BEDs in `raw/medaka/<sample>.medaka.native/tandem/`.
+~~~bash
+bash containers/build.sh --local all
+bash containers/smoke_test.sh
+~~~
+
+The script skips TRGT unless its authorised binary is present. Follow step 3
+if you plan to use it. For local builds, use the image defaults in
+`nextflow.config` and omit the Docker Hub overrides above. If you override a
+caller image, set `container` in its `configs/<caller>.yml` to the same tag so
+`command.json` records the image you ran.
 
 ### 3. Build TRGT locally when you need it
 
